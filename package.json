@@ -1,0 +1,24 @@
+{
+  "name": "selfy",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "keywords": [],
+  "author": "kazeusagi",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "void": "^1.6.2",
+    "vite": "^8.0.10"
+  },
+  "packageManager": "bun",
+  "peerDependencies": {
+    "typescript": "^7"
+  }
+}
