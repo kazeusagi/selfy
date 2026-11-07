@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useUploader } from "@/hooks/use-uploader";
+import { blockedOnCellular, CELLULAR_MESSAGE, type UploadSettings, useUploader } from "@/hooks/use-uploader";
 import { IMAGE_ACCEPT } from "@/components/upload-status";
 
 async function createAlbum(title: string) {
@@ -35,6 +35,7 @@ export function AlbumTitleDialog({
   onOpenChange,
   initialTitle = "",
   heading,
+  label = "アルバム名",
   submitLabel,
   onSubmit,
 }: {
@@ -42,6 +43,7 @@ export function AlbumTitleDialog({
   onOpenChange: (open: boolean) => void;
   initialTitle?: string;
   heading: string;
+  label?: string;
   submitLabel: string;
   onSubmit: (title: string) => Promise<void>;
 }) {
@@ -71,14 +73,14 @@ export function AlbumTitleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-[20px] p-6 sm:max-w-md">
+      <DialogContent className="rounded-[20px] p-6 md:max-w-md">
         <form className="flex flex-col gap-5" onSubmit={submit}>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">{heading}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-2">
             <label htmlFor="album-title" className="text-[13px] font-medium">
-              アルバム名
+              {label}
             </label>
             <Input
               id="album-title"
@@ -126,14 +128,16 @@ export function UploadDialog({
   open,
   onOpenChange,
   albums,
+  settings,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   albums: { id: string; title: string }[];
+  settings: UploadSettings;
 }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
-  const uploader = useUploader();
+  const uploader = useUploader(settings);
   const [target, setTarget] = useState(albums[0]?.id ?? NEW_ALBUM);
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -141,6 +145,10 @@ export function UploadDialog({
 
   async function start(files: File[]) {
     if (!files.length) return;
+    if (blockedOnCellular(settings)) {
+      setError(CELLULAR_MESSAGE);
+      return;
+    }
     setError(null);
     try {
       const albumId = creating ? (await createAlbum(title.trim())).id : target;
@@ -153,7 +161,7 @@ export function UploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !uploader.running && onOpenChange(next)}>
-      <DialogContent className="flex flex-col gap-5 rounded-[20px] p-6 sm:max-w-md">
+      <DialogContent className="flex flex-col gap-5 rounded-[20px] p-6 md:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">写真をアップロード</DialogTitle>
           <DialogDescription>追加先のアルバムを選んでください。</DialogDescription>

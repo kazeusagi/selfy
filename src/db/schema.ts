@@ -1,5 +1,5 @@
 import { sql } from "void/db";
-import { index, integer, real, sqliteTable, text } from "void/schema-d1";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "void/schema-d1";
 
 export const albums = sqliteTable(
   "albums",
@@ -53,4 +53,30 @@ export const shareLinks = sqliteTable("share_links", {
   expiresAt: integer("expires_at"),
   allowDownload: integer("allow_download", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+});
+
+// 招待は未登録の人にも送れるので、ユーザーIDではなくメールアドレスで持つ
+export const albumMembers = sqliteTable(
+  "album_members",
+  {
+    id: text("id").primaryKey(),
+    albumId: text("album_id")
+      .notNull()
+      .references(() => albums.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: text("role", { enum: ["viewer", "contributor"] }).notNull(),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (t) => [
+    uniqueIndex("album_members_album_email_idx").on(t.albumId, t.email),
+    index("album_members_email_idx").on(t.email),
+  ],
+);
+
+export const userSettings = sqliteTable("user_settings", {
+  userId: text("user_id").primaryKey(),
+  keepOriginal: integer("keep_original", { mode: "boolean" }).notNull().default(true),
+  stripGps: integer("strip_gps", { mode: "boolean" }).notNull().default(true),
+  wifiOnly: integer("wifi_only", { mode: "boolean" }).notNull().default(false),
+  defaultExpiry: text("default_expiry", { enum: ["7d", "30d", "never"] }).notNull().default("7d"),
 });

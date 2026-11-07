@@ -1,9 +1,11 @@
-import { photos, shareLinks } from "@schema";
+import { albumMembers, photos, shareLinks } from "@schema";
 import { defineHandler, defineHead } from "void";
 import type { InferProps } from "void";
 import { getUser } from "void/auth";
 import { asc, db, eq } from "void/db";
-import { findOwnedAlbum, isLinkActive } from "@/server/access";
+import { canAddPhotos, canDeletePhoto, findAlbumAccess, isLinkActive } from "@/server/access";
+import { getUserSettings } from "@/server/settings";
+import { addAddedBy, findUsersByEmails, findUsersByIds, initialOf } from "@/server/users";
 
 export type Props = Exclude<InferProps<typeof loader>, Response>;
 
@@ -11,13 +13,16 @@ export const loader = defineHandler(async (c) => {
   const user = getUser();
   if (!user) return c.redirect("/login");
 
-  const album = await findOwnedAlbum(c.req.param("id")!, user.id);
-  if (!album) return c.notFound();
+  const access = await findAlbumAccess(c.req.param("id")!, user);
+  if (!access) return c.notFound();
+  const { album, role } = access;
+  const isOwner = role === "owner";
 
-  const [rows, [link]] = await Promise.all([
+  const [rows, [link], memberRows, settings] = await Promise.all([
     db
       .select({
         id: photos.id,
+        ownerId: photos.ownerId,
         fileName: photos.fileName,
         takenAt: photos.takenAt,
         width: photos.width,
@@ -41,14 +46,37 @@ export const loader = defineHandler(async (c) => {
       })
       .from(shareLinks)
       .where(eq(shareLinks.albumId, album.id)),
+    db
+      .select({ id: albumMembers.id, email: albumMembers.email, role: albumMembers.role })
+      .from(albumMembers)
+      .where(eq(albumMembers.albumId, album.id))
+      .orderBy(asc(albumMembers.createdAt)),
+    getUserSettings(user.id),
   ]);
+
+  const [owner] = await findUsersByIds([album.ownerId]);
+  const joined = await findUsersByEmails(memberRows.map((member) => member.email));
+  const names = new Map(joined.map((member) => [member.email, member.name]));
+  const members = memberRows.map((member) => ({
+    ...member,
+    name: names.get(member.email) ?? "",
+  }));
 
   return {
     user: { name: user.name, email: user.email },
     album: { id: album.id, title: album.title },
-    startSharing: c.req.query("share") !== undefined,
-    photos: rows,
-    shareLink: link ? { ...link, active: isLinkActive(link) } : null,
+    role,
+    canAdd: canAddPhotos(role),
+    startSharing: isOwner && c.req.query("share") !== undefined,
+    photos: (await addAddedBy(rows.map((row) => ({ ...row, deletable: canDeletePhoto(role, row, user.id) })), user.id)).map(
+      // お気に入りはオーナーのものなので、招待された人には見せない
+      (photo) => (isOwner ? photo : { ...photo, favorite: false }),
+    ),
+    // メールアドレスはオーナーにだけ渡す
+    members: isOwner ? members : [],
+    avatars: [owner, ...members].map((member) => initialOf(member)),
+    shareLink: isOwner && link ? { ...link, active: isLinkActive(link) } : null,
+    settings,
   };
 });
 

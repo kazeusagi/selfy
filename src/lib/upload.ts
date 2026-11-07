@@ -2,6 +2,7 @@ import exifr from "exifr";
 
 const DISPLAY_MAX_EDGE = 2048;
 const THUMB_MIN_EDGE = 480;
+const REDUCED_ORIGINAL_MAX_EDGE = 4000;
 const QUALITY = 0.85;
 
 const TYPES_BY_EXTENSION: Record<string, string> = {
@@ -83,7 +84,11 @@ async function decode(file: File, type: string) {
   return createImageBitmap(jpeg, { imageOrientation: "from-image" });
 }
 
-async function buildUpload(file: File) {
+function withExtension(fileName: string, type: string) {
+  return fileName.replace(/(\.[^.]+)?$/, type === "image/webp" ? ".webp" : ".jpg");
+}
+
+async function buildUpload(file: File, keepOriginal: boolean) {
   const type = originalType(file);
   const exif: Record<string, any> = (await exifr.parse(file).catch(() => null)) ?? {};
   const bitmap = await decode(file, type);
@@ -94,17 +99,20 @@ async function buildUpload(file: File) {
     const display = await encode(bitmap, Math.min(1, DISPLAY_MAX_EDGE / longEdge));
     const thumb = await encode(bitmap, Math.min(1, THUMB_MIN_EDGE / shortEdge));
     const taken = exif.DateTimeOriginal instanceof Date ? exif.DateTimeOriginal : new Date(file.lastModified);
+    const scale = keepOriginal ? 1 : Math.min(1, REDUCED_ORIGINAL_MAX_EDGE / longEdge);
+    const reduced = scale < 1 ? await encode(bitmap, scale) : null;
+    const fileName = reduced ? withExtension(file.name, reduced.type) : file.name;
 
     const form = new FormData();
-    form.set("original", new File([file], file.name, { type }));
+    form.set("original", new File([reduced ?? file], fileName, { type: reduced?.type ?? type }));
     form.set("display", display);
     form.set("thumb", thumb);
     form.set(
       "meta",
       JSON.stringify({
-        fileName: file.name,
-        width: bitmap.width,
-        height: bitmap.height,
+        fileName,
+        width: Math.round(bitmap.width * scale),
+        height: Math.round(bitmap.height * scale),
         takenAt: toLocalString(taken),
         latitude: Number.isFinite(exif.latitude) ? exif.latitude : null,
         longitude: Number.isFinite(exif.longitude) ? exif.longitude : null,
@@ -118,8 +126,8 @@ async function buildUpload(file: File) {
   }
 }
 
-export async function uploadPhoto(albumId: string, file: File) {
-  const body = await buildUpload(file);
+export async function uploadPhoto(albumId: string, file: File, keepOriginal: boolean) {
+  const body = await buildUpload(file, keepOriginal);
   const response = await window.fetch(`/api/albums/${albumId}/photos`, { method: "POST", body });
   if (!response.ok) throw new Error(`アップロードに失敗しました（${response.status}）`);
 }

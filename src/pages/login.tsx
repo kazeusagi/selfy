@@ -6,15 +6,98 @@ import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import type { Props } from "./login.server";
 
-const COLLAGE = [
-  "row-span-2 bg-[#c9b8a3]",
-  "bg-[#8fa3b0]",
-  "bg-[#d6cfc2] max-sm:order-1",
-  "col-span-2 bg-[#6e7f6a] max-sm:col-span-1",
-  "bg-[#b9c4ce] max-sm:hidden",
-  "bg-[#a48b78] max-sm:order-1",
-  "bg-[#5f6b73] max-sm:hidden",
+// [ファイル名, 幅, 高さ]
+type LoginPhoto = [string, number, number];
+
+const PHOTO_COLUMNS: { photos: LoginPhoto[]; animation: string }[] = [
+  {
+    animation: "flow-up 70s linear infinite normal",
+    photos: [
+      ["photo08", 1800, 1200],
+      ["photo06", 1800, 1200],
+      ["photo01", 1200, 1800],
+      ["photo11", 1351, 1800],
+      ["photo03", 1200, 1800],
+    ],
+  },
+  {
+    animation: "flow-up 85s linear infinite reverse",
+    photos: [
+      ["photo13", 1286, 1800],
+      ["photo02", 1440, 1800],
+      ["photo12", 1800, 1200],
+      ["photo04", 1350, 1800],
+      ["photo05", 1200, 1800],
+    ],
+  },
+  {
+    animation: "flow-up 64s linear infinite normal",
+    photos: [
+      ["photo10", 1351, 1800],
+      ["photo07", 1200, 1800],
+      ["photo09", 1800, 1200],
+      ["photo14", 1199, 1800],
+    ],
+  },
 ];
+
+const PHOTO_ROWS: { photos: LoginPhoto[]; animation: string }[] = [
+  {
+    animation: "flow-left 80s linear infinite normal",
+    photos: [
+      ["photo08", 1800, 1200],
+      ["photo06", 1800, 1200],
+      ["photo13", 1286, 1800],
+      ["photo10", 1351, 1800],
+      ["photo12", 1800, 1200],
+      ["photo02", 1440, 1800],
+      ["photo07", 1200, 1800],
+    ],
+  },
+  {
+    animation: "flow-left 95s linear infinite reverse",
+    photos: [
+      ["photo01", 1200, 1800],
+      ["photo04", 1350, 1800],
+      ["photo11", 1351, 1800],
+      ["photo03", 1200, 1800],
+      ["photo14", 1199, 1800],
+      ["photo05", 1200, 1800],
+      ["photo09", 1800, 1200],
+    ],
+  },
+];
+
+// 同じ並びを2回繰り返し、ちょうど1周分ずらすことで継ぎ目なくループさせる
+function PhotoStrip({
+  photos,
+  animation,
+  className,
+  imageClassName,
+}: {
+  photos: LoginPhoto[];
+  animation: string;
+  className: string;
+  imageClassName: string;
+}) {
+  return (
+    <div className="login-flow" style={{ animation }}>
+      <div className={className}>
+        {[...photos, ...photos].map(([name, width, height], index) => (
+          <img
+            key={`${name}-${index}`}
+            src={`/login/${name}.jpg`}
+            alt=""
+            width={width}
+            height={height}
+            decoding="async"
+            className={imageClassName}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function PasskeyIcon() {
   return (
@@ -52,7 +135,7 @@ export default function LoginPage({ linkError }: Props) {
       window.location.href = "/";
     } else {
       setError(
-        "パスキーでログインできませんでした。初めての場合はメールでログインし、アカウントメニューからパスキーを登録してください。",
+        "パスキーでログインできませんでした。初めての場合はメールでログインし、設定からパスキーを登録してください。",
       );
     }
   }
@@ -72,28 +155,50 @@ export default function LoginPage({ linkError }: Props) {
   }
 
   return (
-    <div className="flex min-h-screen flex-wrap bg-background text-foreground max-sm:flex-col max-sm:flex-nowrap">
-      <div
-        aria-hidden="true"
-        className="grid min-h-[360px] flex-[1_1_520px] grid-cols-3 grid-rows-3 gap-1.5 p-1.5 max-sm:h-[300px] max-sm:min-h-0 max-sm:flex-none max-sm:grid-rows-2 max-sm:gap-1 max-sm:p-1"
-      >
-        {COLLAGE.map((tile) => (
-          <div key={tile} className={`rounded-[14px] max-sm:rounded-xl ${tile}`} />
-        ))}
+    <div className="flex min-h-screen flex-wrap bg-background text-foreground max-md:flex-col max-md:flex-nowrap">
+      <div className="flex flex-[1_1_520px] p-3 max-md:flex-none max-md:p-0">
+        <div
+          aria-hidden="true"
+          className="grid h-[calc(100vh-24px)] min-h-[336px] flex-1 grid-cols-3 gap-3 overflow-hidden rounded-[20px] max-md:hidden"
+        >
+          {PHOTO_COLUMNS.map((column) => (
+            <div key={column.animation} className="min-w-0 overflow-hidden">
+              <PhotoStrip
+                {...column}
+                className="flex flex-col gap-3"
+                imageClassName="block h-auto w-full rounded-[14px]"
+              />
+            </div>
+          ))}
+        </div>
+        <div
+          aria-hidden="true"
+          className="grid h-[380px] w-full grid-rows-2 gap-2 overflow-hidden py-2 md:hidden"
+        >
+          {PHOTO_ROWS.map((row) => (
+            <div key={row.animation} className="min-h-0 overflow-hidden [&>.login-flow]:h-full">
+              <PhotoStrip
+                {...row}
+                className="flex h-full w-max gap-2"
+                imageClassName="block h-full w-auto flex-none rounded-xl"
+              />
+            </div>
+          ))}
+        </div>
       </div>
-      <main className="flex flex-[1_1_480px] items-center justify-center px-6 py-12 max-sm:flex-1 max-sm:items-start max-sm:py-8">
-        <div className="flex w-full max-w-[380px] flex-col gap-7 max-sm:max-w-none max-sm:gap-[22px]">
+      <main className="flex flex-[1_1_480px] items-center justify-center px-6 py-12 max-md:flex-1 max-md:items-start max-md:py-8">
+        <div className="flex w-full max-w-[380px] flex-col gap-7 max-md:max-w-none max-md:gap-[22px]">
           <div className="flex items-center gap-2.5">
-            <LogoMark className="size-9 rounded-[10px] max-sm:size-8 max-sm:rounded-[9px]" iconSize={20} />
-            <span className="text-[22px] font-bold tracking-[-0.02em] max-sm:text-xl">Selfy</span>
+            <LogoMark className="size-9 rounded-[10px] max-md:size-8 max-md:rounded-[9px]" iconSize={20} />
+            <span className="text-[22px] font-bold tracking-[-0.02em] max-md:text-xl">Selfy</span>
           </div>
-          <div className="flex flex-col gap-2 max-sm:gap-1.5">
-            <h1 className="text-[28px] font-bold tracking-[-0.01em] max-sm:text-[26px] max-sm:tracking-normal">おかえりなさい</h1>
-            <p className="text-[15px] leading-[1.7] text-muted-foreground max-sm:text-sm">
+          <div className="flex flex-col gap-2 max-md:gap-1.5">
+            <h1 className="text-[28px] font-bold tracking-[-0.01em] max-md:text-[26px] max-md:tracking-normal">おかえりなさい</h1>
+            <p className="text-[15px] leading-[1.7] text-muted-foreground max-md:text-sm">
               あなたの写真は、あなたのCloudflareアカウントにだけ保存されます。
             </p>
           </div>
-          <Button className="h-[52px] gap-2.5 rounded-xl text-[15px] font-semibold max-sm:h-[54px] max-sm:rounded-[14px] max-sm:text-base" onClick={signInWithPasskey}>
+          <Button className="h-[52px] gap-2.5 rounded-xl text-[15px] font-semibold max-md:h-[54px] max-md:rounded-[14px] max-md:text-base" onClick={signInWithPasskey}>
             <PasskeyIcon />
             パスキーでログイン
           </Button>
@@ -114,15 +219,15 @@ export default function LoginPage({ linkError }: Props) {
               placeholder="you@example.com"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="h-12 rounded-xl px-3.5 text-[15px] max-sm:h-[50px] max-sm:rounded-[14px] max-sm:text-base md:text-[15px]"
+              className="h-12 rounded-xl px-3.5 text-[15px] max-md:h-[50px] max-md:rounded-[14px] max-md:text-base md:text-[15px]"
             />
             <Button
               type="submit"
               variant="surface"
               disabled={pending}
-              className="h-12 gap-2 rounded-xl text-[15px] font-semibold max-sm:h-[50px] max-sm:rounded-[14px]"
+              className="h-12 gap-2 rounded-xl text-[15px] font-semibold max-md:h-[50px] max-md:rounded-[14px]"
             >
-              <MailIcon className="size-[18px] max-sm:hidden" />
+              <MailIcon className="size-[18px] max-md:hidden" />
               ログインリンクを送る
             </Button>
           </form>
@@ -136,7 +241,7 @@ export default function LoginPage({ linkError }: Props) {
               {error}
             </p>
           )}
-          <p className="text-[13px] leading-[1.7] text-muted-foreground max-sm:hidden">
+          <p className="text-[13px] leading-[1.7] text-muted-foreground max-md:hidden">
             共有リンクを受け取った方は、届いたリンクから直接開けます。
           </p>
         </div>

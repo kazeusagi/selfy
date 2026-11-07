@@ -13,7 +13,7 @@ export function BottomNav({ current }: { current: (typeof ITEMS)[number]["id"] }
   return (
     <nav
       aria-label="メインメニュー"
-      className="fixed inset-x-0 bottom-0 z-20 flex h-20 border-t border-border bg-header pb-4 sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 flex h-20 border-t border-border bg-header pb-4 md:hidden"
     >
       {ITEMS.map(({ id, label, href, icon: Icon }) => (
         <Link
@@ -25,7 +25,7 @@ export function BottomNav({ current }: { current: (typeof ITEMS)[number]["id"] }
             id === current ? "font-semibold text-link-hover" : "font-medium text-muted-foreground",
           )}
         >
-          <Icon className="size-6" />
+          <Icon className={cn("size-6", id === "favorites" && id === current && "fill-current")} />
           {label}
         </Link>
       ))}

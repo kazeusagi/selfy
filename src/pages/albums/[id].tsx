@@ -2,8 +2,8 @@ import { Link, useRouter } from "@void/react";
 import { ChevronLeftIcon, EllipsisIcon, PencilIcon, Share2Icon, Trash2Icon, UploadIcon } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { AlbumTitleDialog } from "@/components/album-dialogs";
-import { AccountMenu, userInitial } from "@/components/account-menu";
-import { AppHeader, HeaderSearch } from "@/components/app-header";
+import { AccountLink } from "@/components/account-link";
+import { AppHeader, HeaderSearch, MainNav } from "@/components/app-header";
 import { Lightbox } from "@/components/lightbox";
 import { MobileFab } from "@/components/mobile-fab";
 import { PhotoGrid } from "@/components/photo-grid";
@@ -28,14 +28,35 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useUploader } from "@/hooks/use-uploader";
 import { formatCount, formatDateRange } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { Props } from "./[id].server";
 
 type Photo = Props["photos"][number];
 type PendingDelete = { kind: "album" } | { kind: "photo"; photo: Photo };
 
-export default function AlbumPage({ user, album, startSharing, photos, shareLink }: Props) {
+const AVATAR_COLORS = ["bg-avatar", "bg-avatar-2", "bg-avatar-3"];
+
+export default function AlbumPage({
+  user,
+  album,
+  role,
+  canAdd,
+  startSharing,
+  photos,
+  members,
+  avatars,
+  shareLink,
+  settings,
+}: Props) {
   const router = useRouter();
-  const uploader = useUploader();
+  const uploader = useUploader(settings);
+  const isOwner = role === "owner";
+  const sharedStatus =
+    avatars.length > 1
+      ? `${avatars.length}人と共有中`
+      : shareLink?.active
+        ? "リンクで共有中"
+        : null;
   const fileInput = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -107,32 +128,37 @@ export default function AlbumPage({ user, album, startSharing, photos, shareLink
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-1 border-b border-border bg-header px-1.5 sm:hidden">
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-1 border-b border-border bg-header px-1.5 md:hidden">
         <Link href="/" aria-label="アルバム一覧に戻る" className="flex size-11 flex-none items-center justify-center">
           <ChevronLeftIcon className="size-6" />
         </Link>
         <span className="truncate text-base font-semibold">{album.title}</span>
-        <div className="flex flex-none">
-          <button
-            type="button"
-            aria-label="共有"
-            onClick={() => setSharing(true)}
-            className="flex size-11 cursor-pointer items-center justify-center"
-          >
-            <Share2Icon className="size-[21px]" />
-          </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              aria-label="その他の操作"
+        {isOwner ? (
+          <div className="flex flex-none">
+            <button
+              type="button"
+              aria-label="共有"
+              onClick={() => setSharing(true)}
               className="flex size-11 cursor-pointer items-center justify-center"
             >
-              <EllipsisIcon className="size-5" />
-            </DropdownMenuTrigger>
-            {menuItems}
-          </DropdownMenu>
-        </div>
+              <Share2Icon className="size-[21px]" />
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label="その他の操作"
+                className="flex size-11 cursor-pointer items-center justify-center"
+              >
+                <EllipsisIcon className="size-5" />
+              </DropdownMenuTrigger>
+              {menuItems}
+            </DropdownMenu>
+          </div>
+        ) : (
+          <span aria-hidden="true" className="w-11 flex-none" />
+        )}
       </header>
-      <AppHeader className="max-sm:hidden">
+      <AppHeader className="max-md:hidden">
+        <MainNav current="albums" />
         <HeaderSearch
           id="q2"
           label="検索"
@@ -140,53 +166,67 @@ export default function AlbumPage({ user, album, startSharing, photos, shareLink
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <AccountMenu user={user} />
+        <AccountLink user={user} />
       </AppHeader>
 
-      <main className="mx-auto flex max-w-[1280px] flex-col gap-7 px-8 pt-7 pb-16 max-sm:gap-0 max-sm:px-0 max-sm:pt-0 max-sm:pb-24">
-        <div className="flex flex-col gap-3.5 max-sm:px-4 max-sm:pt-4 max-sm:pb-2">
+      <main className="mx-auto flex max-w-[1280px] flex-col gap-7 px-8 pt-7 pb-16 max-md:gap-0 max-md:px-0 max-md:pt-0 max-md:pb-24">
+        <div className="flex flex-col gap-3.5 max-md:px-4 max-md:pt-4 max-md:pb-2">
           <Link
             href="/"
-            className="inline-flex min-h-8 items-center gap-1.5 self-start text-sm text-muted-foreground hover:text-link-hover max-sm:hidden"
+            className="inline-flex min-h-8 items-center gap-1.5 self-start text-sm text-muted-foreground hover:text-link-hover max-md:hidden"
           >
             <ChevronLeftIcon className="size-4" />
             アルバム
           </Link>
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="flex flex-col gap-2 max-sm:w-full">
-              <h1 className="text-[32px] font-bold tracking-[-0.02em] max-sm:text-[26px] max-sm:tracking-[-0.01em]">
+            <div className="flex flex-col gap-2 max-md:w-full">
+              <h1 className="text-[32px] font-bold tracking-[-0.02em] max-md:text-[26px] max-md:tracking-[-0.01em]">
                 {album.title}
               </h1>
-              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground max-sm:justify-between max-sm:text-[13px]">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground max-md:justify-between max-md:text-[13px]">
                 <span>{summary.join(" · ")}</span>
-                {shareLink?.active && (
+                {sharedStatus && (
                   <button
                     type="button"
+                    disabled={!isOwner}
                     onClick={() => setSharing(true)}
-                    className="flex cursor-pointer items-center max-sm:h-9 max-sm:px-1"
+                    className="flex items-center enabled:cursor-pointer max-md:h-9 max-md:px-1"
                   >
-                    <span className="flex size-[26px] items-center justify-center rounded-full border-2 border-background bg-avatar text-[11px] font-semibold text-foreground max-sm:size-6 max-sm:text-[10px]">
-                      {userInitial(user)}
-                    </span>
-                    <span className="ml-2 max-sm:ml-1.5">リンクで共有中</span>
+                    {avatars.slice(0, 3).map((initial, index) => (
+                      <span
+                        key={index}
+                        className={cn(
+                          "flex size-[26px] items-center justify-center rounded-full border-2 border-background text-[11px] font-semibold text-foreground max-md:size-6 max-md:text-[10px]",
+                          AVATAR_COLORS[index],
+                          index > 0 && "-ml-2",
+                        )}
+                      >
+                        {initial}
+                      </span>
+                    ))}
+                    <span className="ml-2 max-md:ml-1.5">{sharedStatus}</span>
                   </button>
                 )}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2.5 max-sm:hidden">
-              <Button variant="surface" size="pill" className="font-semibold" onClick={() => setSharing(true)}>
-                <Share2Icon />
-                共有
-              </Button>
-              <Button
-                size="pill"
-                className="font-semibold"
-                disabled={uploader.running}
-                onClick={() => fileInput.current?.click()}
-              >
-                <UploadIcon />
-                写真を追加
-              </Button>
+            <div className="flex flex-wrap gap-2.5 max-md:hidden">
+              {isOwner && (
+                <Button variant="surface" size="pill" className="font-semibold" onClick={() => setSharing(true)}>
+                  <Share2Icon />
+                  共有
+                </Button>
+              )}
+              {canAdd && (
+                <Button
+                  size="pill"
+                  className="font-semibold"
+                  disabled={uploader.running}
+                  onClick={() => fileInput.current?.click()}
+                >
+                  <UploadIcon />
+                  写真を追加
+                </Button>
+              )}
               <input
                 ref={fileInput}
                 type="file"
@@ -198,24 +238,26 @@ export default function AlbumPage({ user, album, startSharing, photos, shareLink
                   event.target.value = "";
                 }}
               />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="surface" size="icon-pill" aria-label="その他の操作">
-                    <EllipsisIcon />
-                  </Button>
-                </DropdownMenuTrigger>
-                {menuItems}
-              </DropdownMenu>
+              {isOwner && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="surface" size="icon-pill" aria-label="その他の操作">
+                      <EllipsisIcon />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  {menuItems}
+                </DropdownMenu>
+              )}
             </div>
           </div>
         </div>
 
         {photos.length === 0 ? (
-          <p className="py-16 text-center text-sm text-muted-foreground max-sm:px-4">
-            まだ写真がありません。「写真を追加」から追加してください。
+          <p className="py-16 text-center text-sm text-muted-foreground max-md:px-4">
+            {canAdd ? "まだ写真がありません。「写真を追加」から追加してください。" : "まだ写真がありません。"}
           </p>
         ) : visible.length === 0 ? (
-          <p className="py-16 text-center text-sm text-muted-foreground max-sm:px-4">
+          <p className="py-16 text-center text-sm text-muted-foreground max-md:px-4">
             「{query}」に一致する写真はありません
           </p>
         ) : (
@@ -223,39 +265,45 @@ export default function AlbumPage({ user, album, startSharing, photos, shareLink
         )}
       </main>
 
-      <MobileFab
-        aria-label="写真を追加"
-        className="bottom-8"
-        disabled={uploader.running}
-        onClick={() => fileInput.current?.click()}
-      />
+      {canAdd && (
+        <MobileFab
+          aria-label="写真を追加"
+          className="bottom-8"
+          disabled={uploader.running}
+          onClick={() => fileInput.current?.click()}
+        />
+      )}
 
       {openIndex >= 0 && (
         <Lightbox
           photos={visible}
           index={openIndex}
           canDownload
-          owner
           paused={pendingDelete !== null}
           onIndexChange={(index) => setOpenId(visible[index].id)}
           onClose={() => setOpenId(null)}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={isOwner ? toggleFavorite : undefined}
           onDelete={(photo) => setPendingDelete({ kind: "photo", photo })}
         />
       )}
 
-      <ShareDialog
-        open={sharing}
-        onOpenChange={(open) => {
-          setSharing(open);
-          // 下部ナビから開いた場合は再読み込みや戻るで開き直さないよう URL から外す
-          if (!open && startSharing) void router.visit(`/albums/${album.id}`, { preserveScroll: true, replace: true });
-        }}
-        albumId={album.id}
-        albumTitle={album.title}
-        user={user}
-        link={shareLink}
-      />
+      {isOwner && (
+        <ShareDialog
+          open={sharing}
+          onOpenChange={(open) => {
+            setSharing(open);
+            // 下部ナビから開いた場合は再読み込みや戻るで開き直さないよう URL から外す
+            if (!open && startSharing) void router.visit(`/albums/${album.id}`, { preserveScroll: true, replace: true });
+          }}
+          albumId={album.id}
+          albumTitle={album.title}
+          user={user}
+          members={members}
+          link={shareLink}
+          defaultExpiry={settings.defaultExpiry}
+          stripGps={settings.stripGps}
+        />
+      )}
       <AlbumTitleDialog
         open={renaming}
         onOpenChange={setRenaming}

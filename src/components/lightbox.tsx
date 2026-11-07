@@ -28,6 +28,8 @@ export type LightboxPhoto = {
   favorite: boolean;
   latitude: number | null;
   longitude: number | null;
+  addedBy: string | null;
+  deletable?: boolean;
 };
 
 function ToolButton({ className, ...props }: ComponentProps<"button">) {
@@ -35,7 +37,7 @@ function ToolButton({ className, ...props }: ComponentProps<"button">) {
     <button
       type="button"
       className={cn(
-        "flex size-11 cursor-pointer items-center justify-center rounded-full text-[#f4f4f5] hover:bg-white/10 max-sm:size-12",
+        "flex size-11 cursor-pointer items-center justify-center rounded-full text-[#f4f4f5] hover:bg-white/10 max-md:size-12",
         className,
       )}
       {...props}
@@ -48,7 +50,7 @@ function StepButton({ className, ...props }: ComponentProps<"button">) {
     <button
       type="button"
       className={cn(
-        "flex size-12 flex-none cursor-pointer items-center justify-center rounded-full bg-white/10 text-[#f4f4f5] hover:bg-white/20 max-sm:absolute max-sm:inset-y-0 max-sm:z-10 max-sm:h-auto max-sm:w-16 max-sm:rounded-none max-sm:bg-transparent max-sm:hover:bg-transparent",
+        "flex size-12 flex-none cursor-pointer items-center justify-center rounded-full bg-white/10 text-[#f4f4f5] hover:bg-white/20 max-md:absolute max-md:inset-y-0 max-md:z-10 max-md:h-auto max-md:w-16 max-md:rounded-none max-md:bg-transparent max-md:hover:bg-transparent",
         className,
       )}
       {...props}
@@ -61,7 +63,6 @@ export function Lightbox<T extends LightboxPhoto>({
   index,
   shareToken,
   canDownload,
-  owner,
   paused = false,
   onIndexChange,
   onClose,
@@ -72,7 +73,6 @@ export function Lightbox<T extends LightboxPhoto>({
   index: number;
   shareToken?: string;
   canDownload: boolean;
-  owner: boolean;
   paused?: boolean;
   onIndexChange: (index: number) => void;
   onClose: () => void;
@@ -80,7 +80,7 @@ export function Lightbox<T extends LightboxPhoto>({
   onDelete?: (photo: T) => void;
 }) {
   // スマホでは詳細が写真に重なるので、閉じた状態から始める
-  const [info, setInfo] = useState(() => window.matchMedia("(min-width: 640px)").matches);
+  const [info, setInfo] = useState(() => window.matchMedia("(min-width: 768px)").matches);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const photo = photos[index];
   const step = (delta: number) => onIndexChange((index + delta + photos.length) % photos.length);
@@ -128,7 +128,7 @@ export function Lightbox<T extends LightboxPhoto>({
           aria-pressed={photo.favorite}
           onClick={() => onToggleFavorite(photo)}
         >
-          <HeartIcon className={cn("size-5 max-sm:size-6", photo.favorite && "fill-current")} />
+          <HeartIcon className={cn("size-5 max-md:size-6", photo.favorite && "fill-current")} />
         </ToolButton>
       )}
       {canDownload && (
@@ -136,14 +136,14 @@ export function Lightbox<T extends LightboxPhoto>({
           aria-label="ダウンロード"
           href={photoUrl(photo.id, "original", shareToken)}
           download={photo.fileName}
-          className="flex size-11 items-center justify-center rounded-full text-[#f4f4f5] hover:bg-white/10 max-sm:size-12"
+          className="flex size-11 items-center justify-center rounded-full text-[#f4f4f5] hover:bg-white/10 max-md:size-12"
         >
-          <DownloadIcon className="size-5 max-sm:size-6" />
+          <DownloadIcon className="size-5 max-md:size-6" />
         </a>
       )}
-      {onDelete && (
-        <ToolButton aria-label="写真を削除" className="max-sm:order-last" onClick={() => onDelete(photo)}>
-          <Trash2Icon className="size-5 max-sm:size-6" />
+      {onDelete && photo.deletable && (
+        <ToolButton aria-label="写真を削除" className="max-md:order-last" onClick={() => onDelete(photo)}>
+          <Trash2Icon className="size-5 max-md:size-6" />
         </ToolButton>
       )}
       <ToolButton
@@ -152,7 +152,7 @@ export function Lightbox<T extends LightboxPhoto>({
         onClick={() => setInfo(!info)}
         className={cn(info && "bg-white/14")}
       >
-        <InfoIcon className="size-5 max-sm:size-6" />
+        <InfoIcon className="size-5 max-md:size-6" />
       </ToolButton>
     </>
   );
@@ -162,12 +162,12 @@ export function Lightbox<T extends LightboxPhoto>({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="fixed inset-0 z-40 flex flex-col overflow-auto bg-[#0b0b0c] text-[#f4f4f5] outline-none max-sm:overflow-hidden"
+          className="fixed inset-0 z-40 flex flex-col overflow-auto bg-[#0b0b0c] text-[#f4f4f5] outline-none max-md:overflow-hidden"
         >
           <DialogPrimitive.Title className="sr-only">写真の拡大表示</DialogPrimitive.Title>
-          <div className="flex h-14 flex-none items-center justify-between px-1.5 sm:hidden">
+          <div className="flex h-14 flex-none items-center justify-between px-1.5 md:hidden">
             <DialogPrimitive.Close asChild>
-              <ToolButton aria-label="閉じる" className="max-sm:size-11">
+              <ToolButton aria-label="閉じる" className="max-md:size-11">
                 <XIcon className="size-6" />
               </ToolButton>
             </DialogPrimitive.Close>
@@ -179,7 +179,7 @@ export function Lightbox<T extends LightboxPhoto>({
             </div>
             <span aria-hidden="true" className="w-11" />
           </div>
-          <div className="flex items-center justify-between gap-3 px-4 py-3 max-sm:hidden">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 max-md:hidden">
             <div className="flex items-center gap-2">
               <DialogPrimitive.Close asChild>
                 <ToolButton aria-label="閉じる">
@@ -192,15 +192,15 @@ export function Lightbox<T extends LightboxPhoto>({
             </div>
             <div className="flex items-center gap-1">{actions}</div>
           </div>
-          <div className="flex min-h-0 flex-1 flex-wrap max-sm:flex-nowrap">
+          <div className="flex min-h-0 flex-1 flex-wrap max-md:flex-nowrap">
             <div
-              className="flex min-h-[360px] min-w-0 flex-[999_1_560px] touch-pan-y touch-pinch-zoom items-center justify-center gap-3 px-4 pt-2 pb-6 max-sm:relative max-sm:min-h-0 max-sm:flex-1 max-sm:p-0"
+              className="flex min-h-[360px] min-w-0 flex-[999_1_560px] touch-pan-y touch-pinch-zoom items-center justify-center gap-3 px-4 pt-2 pb-6 max-md:relative max-md:min-h-0 max-md:flex-1 max-md:p-0"
               onTouchStart={onTouchStart}
               onTouchEnd={onTouchEnd}
             >
               {photos.length > 1 && (
-                <StepButton aria-label="前の写真" className="max-sm:left-0" onClick={() => step(-1)}>
-                  <ChevronLeftIcon className="size-[22px] max-sm:hidden" />
+                <StepButton aria-label="前の写真" className="max-md:left-0" onClick={() => step(-1)}>
+                  <ChevronLeftIcon className="size-[22px] max-md:hidden" />
                 </StepButton>
               )}
               <img
@@ -208,22 +208,22 @@ export function Lightbox<T extends LightboxPhoto>({
                 src={photoUrl(photo.id, "display", shareToken)}
                 alt={photo.fileName}
                 style={{ aspectRatio: `${photo.width} / ${photo.height}` }}
-                className="h-[min(68vh,640px)] max-w-[calc(100%-7.5rem)] rounded-sm object-contain max-sm:absolute max-sm:inset-0 max-sm:size-full max-sm:max-w-none max-sm:rounded-none"
+                className="h-[min(68vh,640px)] max-w-[calc(100%-7.5rem)] rounded-sm object-contain max-md:absolute max-md:inset-0 max-md:size-full max-md:max-w-none max-md:rounded-none"
               />
               {photos.length > 1 && (
-                <StepButton aria-label="次の写真" className="max-sm:right-0" onClick={() => step(1)}>
-                  <ChevronRightIcon className="size-[22px] max-sm:hidden" />
+                <StepButton aria-label="次の写真" className="max-md:right-0" onClick={() => step(1)}>
+                  <ChevronRightIcon className="size-[22px] max-md:hidden" />
                 </StepButton>
               )}
             </div>
             {info && (
               <aside
                 aria-label="写真の詳細"
-                className="flex max-w-full flex-[1_1_300px] flex-col gap-5 border-l border-[#27272a] px-6 pt-2 pb-6 text-sm max-sm:absolute max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-20 max-sm:gap-4 max-sm:rounded-t-[20px] max-sm:border-l-0 max-sm:bg-[#1c1c1f] max-sm:px-5 max-sm:pt-2.5 max-sm:pb-8"
+                className="flex max-w-full flex-[1_1_300px] flex-col gap-5 border-l border-[#27272a] px-6 pt-2 pb-6 text-sm max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:z-20 max-md:gap-4 max-md:rounded-t-[20px] max-md:border-l-0 max-md:bg-[#1c1c1f] max-md:px-5 max-md:pt-2.5 max-md:pb-8"
               >
                 <SheetHandle />
                 <div className="flex items-start justify-between">
-                  <div className="flex min-w-0 flex-col gap-1 max-sm:gap-0.5">
+                  <div className="flex min-w-0 flex-col gap-1 max-md:gap-0.5">
                     <span className="text-base font-semibold break-all">{photo.fileName}</span>
                     <span className="text-[#a1a1aa]">{formatDateTime(photo.takenAt)}</span>
                   </div>
@@ -231,12 +231,12 @@ export function Lightbox<T extends LightboxPhoto>({
                     type="button"
                     aria-label="詳細を閉じる"
                     onClick={() => setInfo(false)}
-                    className="-mt-2 -mr-3 flex size-11 flex-none cursor-pointer items-center justify-center text-[#a1a1aa] sm:hidden"
+                    className="-mt-2 -mr-3 flex size-11 flex-none cursor-pointer items-center justify-center text-[#a1a1aa] md:hidden"
                   >
                     <XIcon className="size-5" />
                   </button>
                 </div>
-                <dl className="grid grid-cols-[88px_1fr] gap-3 max-sm:gap-y-2.5">
+                <dl className="grid grid-cols-[88px_1fr] gap-3 max-md:gap-y-2.5">
                   <dt className="text-[#a1a1aa]">場所</dt>
                   <dd>
                     {hasLocation
@@ -245,16 +245,16 @@ export function Lightbox<T extends LightboxPhoto>({
                   </dd>
                   <dt className="text-[#a1a1aa]">カメラ</dt>
                   <dd>{photo.camera ?? "—"}</dd>
-                  <dt className="text-[#a1a1aa] max-sm:hidden">設定</dt>
-                  <dd className="max-sm:hidden">{photo.exposure ?? "—"}</dd>
+                  <dt className="text-[#a1a1aa] max-md:hidden">設定</dt>
+                  <dd className="max-md:hidden">{photo.exposure ?? "—"}</dd>
                   <dt className="text-[#a1a1aa]">サイズ</dt>
                   <dd>
                     {photo.width} × {photo.height} · {formatBytes(photo.originalBytes)}
                   </dd>
-                  {owner && (
+                  {photo.addedBy && (
                     <>
                       <dt className="text-[#a1a1aa]">追加した人</dt>
-                      <dd>あなた</dd>
+                      <dd className="break-all">{photo.addedBy}</dd>
                     </>
                   )}
                 </dl>
@@ -262,9 +262,9 @@ export function Lightbox<T extends LightboxPhoto>({
             )}
           </div>
           {photos.length > 1 && (
-            <p className="pt-2 text-center text-xs text-[#a1a1aa] sm:hidden">左右にスワイプで前後の写真へ</p>
+            <p className="pt-2 text-center text-xs text-[#a1a1aa] md:hidden">左右にスワイプで前後の写真へ</p>
           )}
-          <div className="flex h-[84px] flex-none items-center justify-around px-3 pb-5 sm:hidden">{actions}</div>
+          <div className="flex h-[84px] flex-none items-center justify-around px-3 pb-5 md:hidden">{actions}</div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

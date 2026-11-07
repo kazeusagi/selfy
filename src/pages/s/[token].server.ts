@@ -3,6 +3,7 @@ import { defineHandler, defineHead } from "void";
 import type { InferProps } from "void";
 import { asc, db, eq } from "void/db";
 import { findActiveShareLink } from "@/server/access";
+import { getAlbumOwnerSettings } from "@/server/settings";
 
 export type Props = InferProps<typeof loader>;
 
@@ -11,7 +12,7 @@ export const loader = defineHandler(async (c) => {
   const link = await findActiveShareLink(token);
   if (!link) return { shared: null };
 
-  const [[album], rows] = await Promise.all([
+  const [[album], rows, settings] = await Promise.all([
     db.select({ title: albums.title }).from(albums).where(eq(albums.id, link.albumId)),
     db
       .select({
@@ -29,6 +30,7 @@ export const loader = defineHandler(async (c) => {
       .from(photos)
       .where(eq(photos.albumId, link.albumId))
       .orderBy(asc(photos.takenAt), asc(photos.createdAt)),
+    getAlbumOwnerSettings(link.albumId),
   ]);
 
   return {
@@ -36,7 +38,13 @@ export const loader = defineHandler(async (c) => {
       token,
       title: album.title,
       allowDownload: link.allowDownload,
-      photos: rows.map((photo) => ({ ...photo, favorite: false })),
+      photos: rows.map((photo) => ({
+        ...photo,
+        favorite: false,
+        addedBy: null,
+        latitude: settings.stripGps ? null : photo.latitude,
+        longitude: settings.stripGps ? null : photo.longitude,
+      })),
     },
   };
 });

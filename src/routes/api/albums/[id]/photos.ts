@@ -5,7 +5,7 @@ import { db } from "void/db";
 import { storage } from "void/storage";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
-import { requireOwnedAlbum } from "@/server/access";
+import { canAddPhotos, findAlbumAccess } from "@/server/access";
 
 const ORIGINAL_TYPES = new Set([
   "image/jpeg",
@@ -39,7 +39,11 @@ function fileField(form: FormData, name: string, allowed: Set<string>) {
 
 export const POST = defineHandler(async (c) => {
   const user = requireAuth(c);
-  const album = await requireOwnedAlbum(c.req.param("id")!, user.id);
+  const access = await findAlbumAccess(c.req.param("id")!, user);
+  if (!access || !canAddPhotos(access.role)) {
+    throw new HTTPException(404, { message: "アルバムが見つかりません" });
+  }
+  const { album } = access;
 
   const form = await c.req.formData();
   const original = fileField(form, "original", ORIGINAL_TYPES);
