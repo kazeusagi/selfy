@@ -8,6 +8,20 @@
       "when": 1794022335319,
       "tag": "20261107033215_wealthy_alex_power",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1794026499877,
+      "tag": "20261107044139_nostalgic_gambit",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794026500870,
+      "tag": "20261107044140_kind_stone_men",
+      "breakpoints": true
     }
   ]
 }

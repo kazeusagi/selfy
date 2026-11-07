@@ -3,6 +3,11 @@ import { defineConfig } from 'void/config';
 
 export default defineConfig({
   "sourceDir": "src",
+  "head": {
+    "titleTemplate": "%s | Selfy",
+    "htmlAttrs": { "lang": "ja" },
+    "link": [{ "rel": "icon", "type": "image/svg+xml", "href": "/favicon.svg" }]
+  },
   "worker": {
     "compatibility_date": "2026-02-24"
   }
