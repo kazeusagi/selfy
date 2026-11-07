@@ -7,6 +7,16 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
+// スマホでは画面下から出るシートにする
+const mobileSheetClassName =
+  "max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-h-[90dvh] max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-[20px] max-sm:rounded-b-none max-sm:data-open:zoom-in-100 max-sm:data-open:slide-in-from-bottom max-sm:data-closed:zoom-out-100 max-sm:data-closed:slide-out-to-bottom"
+
+function SheetHandle() {
+  return (
+    <div aria-hidden="true" className="h-[5px] w-9 flex-none self-center rounded-[3px] bg-input sm:hidden" />
+  )
+}
+
 function Dialog({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -165,4 +175,6 @@ export {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
+  mobileSheetClassName,
+  SheetHandle,
 }

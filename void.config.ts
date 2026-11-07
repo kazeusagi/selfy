@@ -6,9 +6,13 @@ export default defineConfig({
   "head": {
     "titleTemplate": "%s | Selfy",
     "htmlAttrs": { "lang": "ja" },
+    "meta": [{ "name": "viewport", "content": "width=device-width, initial-scale=1" }],
     "link": [{ "rel": "icon", "type": "image/svg+xml", "href": "/favicon.svg" }]
   },
   "worker": {
     "compatibility_date": "2026-02-24"
+  },
+  "cloudflare": {
+    "routes": [{ "pattern": "selfy.kazeusagi.dev", "custom_domain": true }]
   }
 });

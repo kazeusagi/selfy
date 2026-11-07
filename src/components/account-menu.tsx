@@ -69,7 +69,7 @@ export function AccountMenu({ user }: { user: AccountUser }) {
       {notice && (
         <div
           role="status"
-          className="fixed right-6 bottom-6 z-50 rounded-xl bg-foreground px-4 py-3 text-sm font-medium text-background shadow-lg"
+          className="fixed right-6 bottom-6 z-50 max-sm:right-4 max-sm:bottom-40 rounded-xl bg-foreground px-4 py-3 text-sm font-medium text-background shadow-lg"
         >
           {notice}
         </div>

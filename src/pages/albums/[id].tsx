@@ -5,6 +5,7 @@ import { AlbumTitleDialog } from "@/components/album-dialogs";
 import { AccountMenu, userInitial } from "@/components/account-menu";
 import { AppHeader, HeaderSearch } from "@/components/app-header";
 import { Lightbox } from "@/components/lightbox";
+import { MobileFab } from "@/components/mobile-fab";
 import { PhotoGrid } from "@/components/photo-grid";
 import { ShareDialog } from "@/components/share-dialog";
 import { IMAGE_ACCEPT, UploadStatus } from "@/components/upload-status";
@@ -32,14 +33,14 @@ import type { Props } from "./[id].server";
 type Photo = Props["photos"][number];
 type PendingDelete = { kind: "album" } | { kind: "photo"; photo: Photo };
 
-export default function AlbumPage({ user, album, photos, shareLink }: Props) {
+export default function AlbumPage({ user, album, startSharing, photos, shareLink }: Props) {
   const router = useRouter();
   const uploader = useUploader();
   const fileInput = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
-  const [sharing, setSharing] = useState(false);
+  const [sharing, setSharing] = useState(startSharing);
   const [renaming, setRenaming] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
@@ -91,9 +92,47 @@ export default function AlbumPage({ user, album, photos, shareLink }: Props) {
     await router.refresh({ preserveScroll: true });
   }
 
+  const menuItems = (
+    <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuItem onSelect={() => setRenaming(true)}>
+        <PencilIcon />
+        名前を変更
+      </DropdownMenuItem>
+      <DropdownMenuItem variant="destructive" onSelect={() => setPendingDelete({ kind: "album" })}>
+        <Trash2Icon />
+        アルバムを削除
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <AppHeader>
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-1 border-b border-border bg-header px-1.5 sm:hidden">
+        <Link href="/" aria-label="アルバム一覧に戻る" className="flex size-11 flex-none items-center justify-center">
+          <ChevronLeftIcon className="size-6" />
+        </Link>
+        <span className="truncate text-base font-semibold">{album.title}</span>
+        <div className="flex flex-none">
+          <button
+            type="button"
+            aria-label="共有"
+            onClick={() => setSharing(true)}
+            className="flex size-11 cursor-pointer items-center justify-center"
+          >
+            <Share2Icon className="size-[21px]" />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="その他の操作"
+              className="flex size-11 cursor-pointer items-center justify-center"
+            >
+              <EllipsisIcon className="size-5" />
+            </DropdownMenuTrigger>
+            {menuItems}
+          </DropdownMenu>
+        </div>
+      </header>
+      <AppHeader className="max-sm:hidden">
         <HeaderSearch
           id="q2"
           label="検索"
@@ -104,31 +143,37 @@ export default function AlbumPage({ user, album, photos, shareLink }: Props) {
         <AccountMenu user={user} />
       </AppHeader>
 
-      <main className="mx-auto flex max-w-[1280px] flex-col gap-7 px-8 pt-7 pb-16 max-sm:px-4">
-        <div className="flex flex-col gap-3.5">
+      <main className="mx-auto flex max-w-[1280px] flex-col gap-7 px-8 pt-7 pb-16 max-sm:gap-0 max-sm:px-0 max-sm:pt-0 max-sm:pb-24">
+        <div className="flex flex-col gap-3.5 max-sm:px-4 max-sm:pt-4 max-sm:pb-2">
           <Link
             href="/"
-            className="inline-flex min-h-8 items-center gap-1.5 self-start text-sm text-muted-foreground hover:text-link-hover"
+            className="inline-flex min-h-8 items-center gap-1.5 self-start text-sm text-muted-foreground hover:text-link-hover max-sm:hidden"
           >
             <ChevronLeftIcon className="size-4" />
             アルバム
           </Link>
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="flex flex-col gap-2">
-              <h1 className="text-[32px] font-bold tracking-[-0.02em]">{album.title}</h1>
-              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <div className="flex flex-col gap-2 max-sm:w-full">
+              <h1 className="text-[32px] font-bold tracking-[-0.02em] max-sm:text-[26px] max-sm:tracking-[-0.01em]">
+                {album.title}
+              </h1>
+              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground max-sm:justify-between max-sm:text-[13px]">
                 <span>{summary.join(" · ")}</span>
                 {shareLink?.active && (
-                  <span className="flex items-center">
-                    <span className="flex size-[26px] items-center justify-center rounded-full border-2 border-background bg-avatar text-[11px] font-semibold text-foreground">
+                  <button
+                    type="button"
+                    onClick={() => setSharing(true)}
+                    className="flex cursor-pointer items-center max-sm:h-9 max-sm:px-1"
+                  >
+                    <span className="flex size-[26px] items-center justify-center rounded-full border-2 border-background bg-avatar text-[11px] font-semibold text-foreground max-sm:size-6 max-sm:text-[10px]">
                       {userInitial(user)}
                     </span>
-                    <span className="ml-2">リンクで共有中</span>
-                  </span>
+                    <span className="ml-2 max-sm:ml-1.5">リンクで共有中</span>
+                  </button>
                 )}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2.5">
+            <div className="flex flex-wrap gap-2.5 max-sm:hidden">
               <Button variant="surface" size="pill" className="font-semibold" onClick={() => setSharing(true)}>
                 <Share2Icon />
                 共有
@@ -159,33 +204,31 @@ export default function AlbumPage({ user, album, photos, shareLink }: Props) {
                     <EllipsisIcon />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onSelect={() => setRenaming(true)}>
-                    <PencilIcon />
-                    名前を変更
-                  </DropdownMenuItem>
-                  <DropdownMenuItem variant="destructive" onSelect={() => setPendingDelete({ kind: "album" })}>
-                    <Trash2Icon />
-                    アルバムを削除
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
+                {menuItems}
               </DropdownMenu>
             </div>
           </div>
         </div>
 
         {photos.length === 0 ? (
-          <p className="py-16 text-center text-sm text-muted-foreground">
+          <p className="py-16 text-center text-sm text-muted-foreground max-sm:px-4">
             まだ写真がありません。「写真を追加」から追加してください。
           </p>
         ) : visible.length === 0 ? (
-          <p className="py-16 text-center text-sm text-muted-foreground">
+          <p className="py-16 text-center text-sm text-muted-foreground max-sm:px-4">
             「{query}」に一致する写真はありません
           </p>
         ) : (
           <PhotoGrid photos={visible} onOpen={(photo) => setOpenId(photo.id)} />
         )}
       </main>
+
+      <MobileFab
+        aria-label="写真を追加"
+        className="bottom-8"
+        disabled={uploader.running}
+        onClick={() => fileInput.current?.click()}
+      />
 
       {openIndex >= 0 && (
         <Lightbox
@@ -203,7 +246,11 @@ export default function AlbumPage({ user, album, photos, shareLink }: Props) {
 
       <ShareDialog
         open={sharing}
-        onOpenChange={setSharing}
+        onOpenChange={(open) => {
+          setSharing(open);
+          // 下部ナビから開いた場合は再読み込みや戻るで開き直さないよう URL から外す
+          if (!open && startSharing) void router.visit(`/albums/${album.id}`, { preserveScroll: true, replace: true });
+        }}
         albumId={album.id}
         albumTitle={album.title}
         user={user}

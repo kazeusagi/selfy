@@ -57,9 +57,9 @@ export default function SharedAlbumPage({ shared }: Props) {
       <AppHeader>
         <ThemeMenu />
       </AppHeader>
-      <main className="mx-auto flex max-w-[1280px] flex-col gap-7 px-8 pt-7 pb-16 max-sm:px-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-[32px] font-bold tracking-[-0.02em]">{title}</h1>
+      <main className="mx-auto flex max-w-[1280px] flex-col gap-7 px-8 pt-7 pb-16 max-sm:gap-0 max-sm:px-0 max-sm:pt-0">
+        <div className="flex flex-col gap-2 max-sm:px-4 max-sm:pt-4 max-sm:pb-2">
+          <h1 className="text-[32px] font-bold tracking-[-0.02em] max-sm:text-[26px] max-sm:tracking-[-0.01em]">{title}</h1>
           <p className="text-sm text-muted-foreground">{summary.join(" · ")}</p>
         </div>
         <PhotoGrid

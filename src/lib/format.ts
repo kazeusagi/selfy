@@ -28,6 +28,11 @@ export function formatDateTime(takenAt: string) {
   return `${year}年${month}月${day}日 ${time}`;
 }
 
+export function formatShortDateTime(takenAt: string) {
+  const { month, day, time } = parts(takenAt);
+  return `${month}月${day}日 ${time}`;
+}
+
 export function formatDateRange(from: string, to: string) {
   const a = parts(from);
   const b = parts(to);

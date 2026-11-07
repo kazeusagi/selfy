@@ -46,6 +46,7 @@ export const loader = defineHandler(async (c) => {
   return {
     user: { name: user.name, email: user.email },
     album: { id: album.id, title: album.title },
+    startSharing: c.req.query("share") !== undefined,
     photos: rows,
     shareLink: link ? { ...link, active: isLinkActive(link) } : null,
   };

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Selfy アルバム一覧（スマホ）（ダーク）</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}:root{color-scheme:dark}
+a{color:#F4F4F5;text-decoration:none}
+input:focus,button:focus-visible,a:focus-visible{outline:2px solid #7C93FF;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; overflow: hidden; position: relative; background: #0F0F10; color: #F4F4F5; font-family: Inter, 'Noto Sans JP', sans-serif; display: flex; flex-direction: column">
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 20px 16px 120px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <h1 style="margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.02em">アルバム</h1>
+      <button aria-label="アカウント" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #2A2A2E; background: #3A342C; color: #F4F4F5; font: inherit; font-size: 14px; font-weight: 600">T</button>
+    </div>
+    <div style="position: relative">
+      <label for="mq" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">検索</label>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8B8B94" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 14px; top: 13px"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+      <input id="mq" type="search" placeholder="アルバムや写真を検索" style="width: 100%; height: 44px; box-sizing: border-box; border: none; border-radius: 12px; padding: 0 14px 0 42px; font: inherit; font-size: 16px; background: #232326; color: #F4F4F5">
+    </div>
+    <div role="tablist" aria-label="表示切り替え" style="display: flex; gap: 8px">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+        <button role="tab" aria-selected="{{t.selected}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 12px">
+      <sc-for list="{{albums}}" as="a" hint-placeholder-count="6">
+        <a href="MobileAlbumDark.html" style="display: flex; flex-direction: column; gap: 8px">
+          <div style="aspect-ratio: 1 / 1; border-radius: 14px; overflow: hidden; background: {{a.c1}}; position: relative">
+            <sc-if value="{{a.shared}}" hint-placeholder-val="{{ false }}">
+              <span style="position: absolute; left: 8px; bottom: 8px; width: 28px; height: 28px; border-radius: 14px; background: rgba(24,24,27,0.72); color: #FFFFFF; display: flex; align-items: center; justify-content: center" aria-label="共有中" role="img">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7"></path><path d="M21.5 20c0-3-2-5.5-4.5-6.3"></path></svg>
+              </span>
+            </sc-if>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 2px">
+            <span style="font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{a.title}}</span>
+            <span style="font-size: 13px; color: #A1A1AA">{{a.meta}}</span>
+          </div>
+        </a>
+      </sc-for>
+    </div>
+  </div>
+
+  <button aria-label="写真をアップロード" style="position: absolute; right: 16px; bottom: 96px; width: 56px; height: 56px; border: none; border-radius: 28px; background: #3B5BF0; color: #FFFFFF; box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+  </button>
+
+  <nav aria-label="メインメニュー" style="position: absolute; left: 0; right: 0; bottom: 0; height: 80px; padding-bottom: 16px; box-sizing: border-box; background: rgba(15,15,16,0.92); border-top: 1px solid #2A2A2E; display: flex">
+    <a href="MobileAlbumsDark.html" aria-current="page" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 600; color: #9DB0FF">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"></rect><rect x="13" y="3" width="8" height="8" rx="2"></rect><rect x="3" y="13" width="8" height="8" rx="2"></rect><rect x="13" y="13" width="8" height="8" rx="2"></rect></svg>
+      アルバム
+    </a>
+    <a href="MobileFavoritesDark.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 500; color: #A1A1AA">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>
+      お気に入り
+    </a>
+    <a href="MobileAlbumsDark.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 500; color: #A1A1AA">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7"></path><path d="M21.5 20c0-3-2-5.5-4.5-6.3"></path></svg>
+      共有
+    </a>
+    <a href="MobileSettingsDark.html" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 500; color: #A1A1AA">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+      設定
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'all' };
+  }
+  renderVals() {
+    const tabDefs = [
+      { id: 'all', label: 'すべて' },
+      { id: 'mine', label: '自分' },
+      { id: 'shared', label: '共有された' }
+    ];
+    const tabs = tabDefs.map((t) => {
+      const on = this.state.tab === t.id;
+      return {
+        ...t,
+        selected: on ? 'true' : 'false',
+        pick: () => this.setState({ tab: t.id }),
+        style: 'height: 36px; padding: 0 16px; border-radius: 18px; font: inherit; font-size: 14px; font-weight: 600; ' + (on ? 'border: 1px solid #F4F4F5; background: #F4F4F5; color: #0F0F10' : 'border: 1px solid #3A3A3F; background: transparent; color: #F4F4F5')
+      };
+    });
+    const all = [
+      { title: '京都 秋の旅', meta: '248 枚', c1: '#A48B78', shared: true, owner: 'mine' },
+      { title: '週末のさんぽ', meta: '96 枚', c1: '#8FA3B0', shared: false, owner: 'mine' },
+      { title: '実家の庭', meta: '57 枚', c1: '#6E7F6A', shared: true, owner: 'mine' },
+      { title: '沖縄 2026夏', meta: '312 枚', c1: '#B9C4CE', shared: false, owner: 'mine' },
+      { title: 'むぎ（ねこ）', meta: '421 枚', c1: '#CDB6A0', shared: false, owner: 'mine' },
+      { title: '佐藤さんの結婚式', meta: '150 枚 · 佐藤 健さん', c1: '#5F6B73', shared: true, owner: 'shared' }
+    ];
+    const albums = all.filter((a) => {
+      if (this.state.tab === 'mine') return a.owner === 'mine';
+      if (this.state.tab === 'shared') return a.owner === 'shared';
+      return true;
+    });
+    return { tabs, albums };
+  }
+}
+</script>
+</body>
+</html>

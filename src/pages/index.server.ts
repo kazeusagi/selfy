@@ -82,6 +82,7 @@ export const loader = defineHandler(async (c) => {
   return {
     user: { name: user.name, email: user.email },
     q,
+    pickingShare: c.req.query("share") !== undefined,
     albums: list,
     albumOptions: summaries.map((album) => ({ id: album.id, title: album.title })),
     stats: {

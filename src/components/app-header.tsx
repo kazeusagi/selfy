@@ -2,10 +2,11 @@ import { Link } from "@void/react";
 import { SearchIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { LogoMark } from "@/components/logo";
+import { cn } from "@/lib/utils";
 
-export function AppHeader({ children }: { children: ReactNode }) {
+export function AppHeader({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-header">
+    <header className={cn("sticky top-0 z-20 border-b border-border bg-header", className)}>
       <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-4 px-8 py-3.5 max-sm:px-4">
         <Link
           href="/"

@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "source": {
+    "routes": [
+      {
+        "pattern": "selfy.kazeusagi.dev",
+        "custom_domain": true
+      }
+    ]
+  },
+  "resolved": {
+    "account_id": "d71cd989d9a84334bbaecf71047b6ad5",
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "selfy-db",
+        "database_id": "958b3f6c-e539-4e0c-b9d8-4bf6c1eefb89",
+        "migrations_dir": "./src/db/migrations"
+      }
+    ],
+    "r2_buckets": [
+      {
+        "binding": "STORAGE",
+        "bucket_name": "selfy-storage"
+      }
+    ],
+    "name": "selfy",
+    "routes": [
+      {
+        "pattern": "selfy.kazeusagi.dev",
+        "custom_domain": true
+      }
+    ]
+  },
+  "text": "{\n  \"account_id\": \"d71cd989d9a84334bbaecf71047b6ad5\",\n  \"d1_databases\": [\n    {\n      \"binding\": \"DB\",\n      \"database_name\": \"selfy-db\",\n      \"database_id\": \"958b3f6c-e539-4e0c-b9d8-4bf6c1eefb89\",\n      \"migrations_dir\": \"./src/db/migrations\"\n    }\n  ],\n  \"r2_buckets\": [\n    {\n      \"binding\": \"STORAGE\",\n      \"bucket_name\": \"selfy-storage\"\n    }\n  ],\n  \"name\": \"selfy\",\n  \"routes\": [\n    {\n      \"pattern\": \"selfy.kazeusagi.dev\",\n      \"custom_domain\": true\n    }\n  ]\n}\n"
+}

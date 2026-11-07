@@ -21,7 +21,7 @@ export function UploadStatus({
   return (
     <div
       role="status"
-      className="fixed right-6 bottom-6 z-30 flex w-80 max-w-[calc(100%-2rem)] flex-col gap-2 rounded-2xl border border-border bg-popover p-4 text-sm shadow-lg"
+      className="fixed right-6 bottom-6 z-30 max-sm:right-4 max-sm:bottom-28 flex w-80 max-w-[calc(100%-2rem)] flex-col gap-2 rounded-2xl border border-border bg-popover p-4 text-sm shadow-lg"
     >
       <div className="flex items-center justify-between gap-2 font-semibold">
         {running ? `${finished} / ${total} 枚をアップロード中` : `${failures.length} 枚を追加できませんでした`}

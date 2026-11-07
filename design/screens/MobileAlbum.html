@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Selfy アルバム（スマホ）</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#18181B;text-decoration:none}
+input:focus,select:focus,button:focus-visible,a:focus-visible{outline:2px solid #2747D6;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; overflow: hidden; position: relative; background: #FAFAF9; color: #18181B; font-family: Inter, 'Noto Sans JP', sans-serif; display: flex; flex-direction: column">
+  <div style="flex: none; height: 56px; padding: 0 6px; display: flex; align-items: center; justify-content: space-between; background: rgba(250,250,249,0.94); border-bottom: 1px solid #E4E4E7">
+    <a href="MobileAlbums.html" aria-label="アルバム一覧に戻る" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+    </a>
+    <span style="font-size: 16px; font-weight: 600">京都 秋の旅</span>
+    <div style="display: flex">
+      <button onClick="{{openShare}}" aria-label="共有" style="width: 44px; height: 44px; border: none; background: transparent; color: #18181B; display: flex; align-items: center; justify-content: center">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="m8.6 13.5 6.8 4"></path><path d="m15.4 6.5-6.8 4"></path></svg>
+      </button>
+      <button aria-label="その他の操作" style="width: 44px; height: 44px; border: none; background: transparent; color: #18181B; display: flex; align-items: center; justify-content: center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+      </button>
+    </div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 96px">
+    <div style="padding: 16px 16px 8px; display: flex; flex-direction: column; gap: 8px">
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em">京都 秋の旅</h1>
+      <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #52525B">
+        <span>248 枚 · 10月11日〜13日</span>
+        <button onClick="{{openShare}}" style="height: 36px; padding: 0 4px; border: none; background: transparent; font: inherit; font-size: 13px; color: #52525B; display: flex; align-items: center; gap: 6px">
+          <span style="display: flex">
+            <span style="width: 24px; height: 24px; border-radius: 12px; background: #E9E4DC; border: 2px solid #FAFAF9; font-size: 10px; font-weight: 600; color: #18181B; display: flex; align-items: center; justify-content: center">T</span>
+            <span style="width: 24px; height: 24px; border-radius: 12px; background: #DCE3EA; border: 2px solid #FAFAF9; margin-left: -8px; font-size: 10px; font-weight: 600; color: #18181B; display: flex; align-items: center; justify-content: center">母</span>
+            <span style="width: 24px; height: 24px; border-radius: 12px; background: #DDE6DA; border: 2px solid #FAFAF9; margin-left: -8px; font-size: 10px; font-weight: 600; color: #18181B; display: flex; align-items: center; justify-content: center">健</span>
+          </span>
+          3人と共有中
+        </button>
+      </div>
+    </div>
+    <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+      <section style="display: flex; flex-direction: column">
+        <h2 style="margin: 0; padding: 14px 16px 8px; font-size: 14px; font-weight: 600; display: flex; gap: 8px; align-items: baseline">{{g.date}}<span style="font-size: 12px; font-weight: 400; color: #52525B">{{g.place}}</span></h2>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px">
+          <sc-for list="{{g.photos}}" as="p" hint-placeholder-count="9">
+            <button onClick="{{p.open}}" aria-label="{{p.label}}" style="aspect-ratio: 1 / 1; border: none; padding: 0; background: {{p.color}}; display: flex; align-items: flex-end; justify-content: flex-end">
+              <sc-if value="{{p.fav}}" hint-placeholder-val="{{ false }}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true" style="margin: 6px"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+    </sc-for>
+  </div>
+
+  <button aria-label="写真を追加" style="position: absolute; right: 16px; bottom: 32px; width: 56px; height: 56px; border: none; border-radius: 28px; background: #2747D6; color: #FFFFFF; box-shadow: 0 8px 24px rgba(39,71,214,0.35); display: flex; align-items: center; justify-content: center">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+  </button>
+
+  <sc-if value="{{hasCur}}" hint-placeholder-val="{{ false }}">
+    <div role="dialog" aria-modal="true" aria-label="写真の拡大表示" style="position: absolute; inset: 0; z-index: 10; background: #0B0B0C; color: #F4F4F5; display: flex; flex-direction: column">
+      <div style="flex: none; height: 56px; padding: 0 6px; display: flex; align-items: center; justify-content: space-between">
+        <button onClick="{{close}}" aria-label="閉じる" style="width: 44px; height: 44px; border: none; background: transparent; color: #F4F4F5; display: flex; align-items: center; justify-content: center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg>
+        </button>
+        <div style="display: flex; flex-direction: column; align-items: center">
+          <span style="font-size: 14px; font-weight: 600">{{cur.shortDate}}</span>
+          <span style="font-size: 12px; color: #A1A1AA">{{cur.pos}}</span>
+        </div>
+        <span style="width: 44px" aria-hidden="true"></span>
+      </div>
+      <div style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; position: relative">
+        <div role="img" aria-label="{{cur.label}}" style="width: 100%; max-height: 100%; aspect-ratio: {{cur.ratio}}; background: {{cur.color}}"></div>
+        <button onClick="{{prev}}" aria-label="前の写真" style="position: absolute; left: 0; top: 0; bottom: 0; width: 64px; border: none; background: transparent"></button>
+        <button onClick="{{next}}" aria-label="次の写真" style="position: absolute; right: 0; top: 0; bottom: 0; width: 64px; border: none; background: transparent"></button>
+      </div>
+      <p style="margin: 0; padding: 8px 0 0; text-align: center; font-size: 12px; color: #A1A1AA">左右にスワイプで前後の写真へ</p>
+      <div style="flex: none; height: 84px; padding: 0 12px 20px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-around">
+        <button onClick="{{toggleFav}}" aria-label="お気に入り" aria-pressed="{{cur.favAttr}}" style="width: 48px; height: 48px; border: none; background: transparent; color: #F4F4F5; display: flex; align-items: center; justify-content: center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="{{cur.favFill}}" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>
+        </button>
+        <button aria-label="ダウンロード" style="width: 48px; height: 48px; border: none; background: transparent; color: #F4F4F5; display: flex; align-items: center; justify-content: center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12"></path><path d="m6 10 6 6 6-6"></path><path d="M4 20h16"></path></svg>
+        </button>
+        <button onClick="{{toggleInfo}}" aria-label="詳細情報" aria-pressed="{{infoAttr}}" style="width: 48px; height: 48px; border: none; background: transparent; color: #F4F4F5; display: flex; align-items: center; justify-content: center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6"></path><path d="M12 7.5v.5"></path></svg>
+        </button>
+        <button aria-label="削除" style="width: 48px; height: 48px; border: none; background: transparent; color: #F4F4F5; display: flex; align-items: center; justify-content: center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M6 7l1 13h10l1-13"></path></svg>
+        </button>
+      </div>
+      <sc-if value="{{info}}" hint-placeholder-val="{{ false }}">
+        <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #1C1C1F; border-radius: 20px 20px 0 0; padding: 10px 20px 32px; display: flex; flex-direction: column; gap: 16px; font-size: 14px">
+          <div style="width: 36px; height: 5px; border-radius: 3px; background: #3F3F46; align-self: center" aria-hidden="true"></div>
+          <div style="display: flex; align-items: flex-start; justify-content: space-between">
+            <div style="display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 16px; font-weight: 600">{{cur.file}}</span>
+              <span style="color: #A1A1AA">{{cur.date}}</span>
+            </div>
+            <button onClick="{{toggleInfo}}" aria-label="詳細を閉じる" style="width: 44px; height: 44px; margin: -8px -12px 0 0; border: none; background: transparent; color: #A1A1AA; display: flex; align-items: center; justify-content: center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg>
+            </button>
+          </div>
+          <dl style="margin: 0; display: grid; grid-template-columns: 88px 1fr; gap: 10px 12px">
+            <dt style="color: #A1A1AA">場所</dt><dd style="margin: 0">{{cur.place}}</dd>
+            <dt style="color: #A1A1AA">カメラ</dt><dd style="margin: 0">iPhone 17 Pro</dd>
+            <dt style="color: #A1A1AA">サイズ</dt><dd style="margin: 0">{{cur.size}}</dd>
+            <dt style="color: #A1A1AA">追加した人</dt><dd style="margin: 0">あなた</dd>
+          </dl>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{share}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; z-index: 10; background: rgba(24,24,27,0.48); display: flex; flex-direction: column; justify-content: flex-end">
+      <button onClick="{{closeShare}}" aria-label="共有を閉じる" style="flex: 1; border: none; background: transparent"></button>
+      <div role="dialog" aria-modal="true" aria-labelledby="m-share-title" style="max-height: 760px; overflow-y: auto; background: #FFFFFF; border-radius: 20px 20px 0 0; padding: 10px 20px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+        <div style="width: 36px; height: 5px; border-radius: 3px; background: #D4D4D8; align-self: center" aria-hidden="true"></div>
+        <div style="display: flex; align-items: center; justify-content: space-between">
+          <h2 id="m-share-title" style="margin: 0; font-size: 18px; font-weight: 700">「京都 秋の旅」を共有</h2>
+          <button onClick="{{closeShare}}" style="height: 44px; padding: 0 4px; border: none; background: transparent; color: #2747D6; font: inherit; font-size: 15px; font-weight: 600">完了</button>
+        </div>
+        <form style="display: flex; flex-direction: column; gap: 8px">
+          <label for="m-invite" style="font-size: 13px; font-weight: 500">メールアドレスで招待</label>
+          <div style="display: flex; gap: 8px">
+            <input id="m-invite" type="email" placeholder="name@example.com" style="flex: 1; min-width: 0; height: 46px; border: 1px solid #D4D4D8; border-radius: 12px; padding: 0 12px; font: inherit; font-size: 16px; background: #FFFFFF; color: #18181B">
+            <button type="button" style="flex: none; height: 46px; padding: 0 16px; border: none; border-radius: 12px; background: #2747D6; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 600">招待</button>
+          </div>
+          <label for="m-role" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">権限</label>
+          <select id="m-role" style="height: 44px; border: 1px solid #D4D4D8; border-radius: 12px; padding: 0 10px; font: inherit; font-size: 15px; background: #FFFFFF; color: #18181B">
+            <option>閲覧のみ</option>
+            <option>写真の追加も可</option>
+          </select>
+        </form>
+        <div style="display: flex; flex-direction: column">
+          <h3 style="margin: 0 0 4px; font-size: 13px; font-weight: 600; color: #52525B">メンバー</h3>
+          <sc-for list="{{members}}" as="m" hint-placeholder-count="3">
+            <div style="display: flex; align-items: center; gap: 12px; min-height: 52px">
+              <span style="flex: none; width: 36px; height: 36px; border-radius: 18px; background: {{m.bg}}; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center">{{m.initial}}</span>
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+                <span style="font-size: 15px; font-weight: 500">{{m.name}}</span>
+                <span style="font-size: 12px; color: #52525B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{m.email}}</span>
+              </div>
+              <span style="font-size: 12px; color: #52525B">{{m.role}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="border-top: 1px solid #E4E4E7"></div>
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+            <span id="m-link-label" style="font-size: 15px; font-weight: 500">リンクで共有</span>
+            <span style="font-size: 12px; color: #52525B">{{linkDesc}}</span>
+          </div>
+          <button role="switch" aria-checked="{{linkAttr}}" aria-labelledby="m-link-label" onClick="{{toggleLink}}" style="flex: none; width: 52px; height: 32px; border: none; border-radius: 16px; padding: 3px; background: {{switchBg}}; display: flex; justify-content: {{switchJustify}}">
+            <span style="width: 26px; height: 26px; border-radius: 13px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.2)"></span>
+          </button>
+        </div>
+        <sc-if value="{{link}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <button type="button" onClick="{{copy}}" style="height: 50px; border: 1px solid #D4D4D8; border-radius: 14px; background: #FAFAF9; color: #18181B; font: inherit; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+              {{copyLabel}}
+            </button>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="m-expiry" style="font-size: 12px; font-weight: 500; color: #52525B">有効期限</label>
+                <select id="m-expiry" style="height: 44px; border: 1px solid #D4D4D8; border-radius: 12px; padding: 0 10px; font: inherit; font-size: 15px; background: #FFFFFF; color: #18181B">
+                  <option>7日間</option>
+                  <option>30日間</option>
+                  <option>無期限</option>
+                </select>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <label for="m-dl" style="font-size: 12px; font-weight: 500; color: #52525B">ダウンロード</label>
+                <select id="m-dl" style="height: 44px; border: 1px solid #D4D4D8; border-radius: 12px; padding: 0 10px; font: inherit; font-size: 15px; background: #FFFFFF; color: #18181B">
+                  <option>保存不可</option>
+                  <option>元画像を保存可</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"view":{"editor":"enum","options":["grid","lightbox","share"],"default":"grid"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const v = props.view ?? 'grid';
+    this.state = { open: v === 'lightbox' ? 5 : null, share: v === 'share', info: false, link: true, copied: false, favs: { 2: true, 5: true, 13: true } };
+  }
+  renderVals() {
+    const tones = ['#A48B78', '#C9B8A3', '#6E7F6A', '#8FA3B0', '#D6CFC2', '#5F6B73', '#B9C4CE', '#CDB6A0', '#9AAE9F', '#E3DCD2', '#7D6A5C', '#BFAE98'];
+    const ratios = ['3 / 4', '4 / 3', '3 / 2', '2 / 3', '1 / 1'];
+    const defs = [
+      { date: '10月11日（土）', place: '嵐山・嵯峨野', n: 9 },
+      { date: '10月12日（日）', place: '東山・清水寺', n: 12 },
+      { date: '10月13日（月）', place: '伏見稲荷', n: 6 }
+    ];
+    const s = this.state;
+    const flat = [];
+    const groups = defs.map((d) => {
+      const photos = [];
+      for (let k = 0; k < d.n; k++) {
+        const i = flat.length;
+        const day = d.date.replace(/（.*）/, '');
+        const time = (9 + (i % 8)) + ':' + String((i * 7) % 60).padStart(2, '0');
+        const p = {
+          i,
+          color: tones[(i * 5) % tones.length],
+          ratio: ratios[i % ratios.length],
+          fav: !!s.favs[i],
+          place: d.place,
+          shortDate: day + ' ' + time,
+          date: '2026年' + day + ' ' + time,
+          file: 'IMG_' + (4810 + i) + '.HEIC',
+          label: d.place + 'の写真 ' + (k + 1),
+          open: () => this.setState({ open: i })
+        };
+        flat.push(p);
+        photos.push(p);
+      }
+      return { date: d.date, place: d.place, photos };
+    });
+    const total = flat.length;
+    const cur = s.open === null ? null : flat[s.open];
+    const go = (step) => this.setState({ open: (s.open + step + total) % total });
+    return {
+      groups,
+      hasCur: cur !== null,
+      cur: cur ? {
+        ...cur,
+        pos: (cur.i + 1) + ' / ' + total,
+        favAttr: cur.fav ? 'true' : 'false',
+        favFill: cur.fav ? 'currentColor' : 'none',
+        size: cur.ratio === '1 / 1' ? '4032 × 4032 · 3.1 MB' : '4032 × 3024 · 2.8 MB'
+      } : {},
+      close: () => this.setState({ open: null, info: false }),
+      prev: () => go(-1),
+      next: () => go(1),
+      toggleFav: () => this.setState({ favs: { ...s.favs, [s.open]: !s.favs[s.open] } }),
+      info: s.info,
+      infoAttr: s.info ? 'true' : 'false',
+      toggleInfo: () => this.setState({ info: !s.info }),
+      share: s.share,
+      openShare: () => this.setState({ share: true }),
+      closeShare: () => this.setState({ share: false, copied: false }),
+      members: [
+        { initial: 'T', name: 'あなた', email: 'owner@example.com', role: 'オーナー', bg: '#E9E4DC' },
+        { initial: '母', name: 'お母さん', email: 'mom@example.com', role: '閲覧のみ', bg: '#DCE3EA' },
+        { initial: '健', name: '佐藤 健', email: 'ken.sato@example.com', role: '追加も可', bg: '#DDE6DA' }
+      ],
+      link: s.link,
+      linkAttr: s.link ? 'true' : 'false',
+      linkDesc: s.link ? 'リンクを知っている人は誰でも閲覧できます' : 'オフ — 招待したメンバーだけが閲覧できます',
+      switchBg: s.link ? '#2747D6' : '#D4D4D8',
+      switchJustify: s.link ? 'flex-end' : 'flex-start',
+      toggleLink: () => this.setState({ link: !s.link, copied: false }),
+      copyLabel: s.copied ? 'コピーしました' : 'リンクをコピー',
+      copy: () => this.setState({ copied: true })
+    };
+  }
+}
+</script>
+</body>
+</html>

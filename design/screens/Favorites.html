@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Selfy お気に入り</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#18181B;text-decoration:none}a:hover{color:#2747D6}
+input:focus{outline:2px solid #2747D6;outline-offset:1px}
+</style>
+</helmet>
+<div style="min-height: 1100px; background: #FAFAF9; color: #18181B; font-family: Inter, 'Noto Sans JP', sans-serif">
+  <header style="position: sticky; top: 0; background: rgba(250,250,249,0.92); border-bottom: 1px solid #E4E4E7; z-index: 2">
+    <div style="max-width: 1280px; margin: 0 auto; padding: 14px 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; box-sizing: border-box">
+      <a href="Albums.html" style="display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 700; letter-spacing: -0.02em">
+        <span style="width: 30px; height: 30px; border-radius: 9px; background: #2747D6; display: flex; align-items: center; justify-content: center">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"></rect><circle cx="12" cy="12" r="3.5"></circle></svg>
+        </span>
+        Selfy
+      </a>
+      <nav aria-label="メインメニュー" style="display: flex; gap: 4px">
+        <a href="Albums.html" style="height: 36px; padding: 0 14px; border-radius: 18px; display: flex; align-items: center; font-size: 14px; font-weight: 500; color: #52525B">アルバム</a>
+        <a href="Favorites.html" aria-current="page" style="height: 36px; padding: 0 14px; border-radius: 18px; display: flex; align-items: center; font-size: 14px; font-weight: 600; background: #F0EFEC; color: #18181B">お気に入り</a>
+      </nav>
+      <div style="flex: 1 1 280px; max-width: 480px; margin: 0 auto; position: relative">
+        <label for="q" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">検索</label>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 14px; top: 13px"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <input id="q" type="search" placeholder="アルバムや写真を検索" style="width: 100%; height: 44px; box-sizing: border-box; border: 1px solid #E4E4E7; border-radius: 22px; padding: 0 16px 0 42px; font: inherit; font-size: 14px; background: #FFFFFF; color: #18181B">
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <button style="height: 44px; padding: 0 18px; border: none; border-radius: 22px; background: #2747D6; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"></path><path d="m6 10 6-6 6 6"></path><path d="M4 20h16"></path></svg>
+          アップロード
+        </button>
+        <a href="Settings.html" aria-label="設定とアカウント" style="width: 44px; height: 44px; box-sizing: border-box; border-radius: 22px; border: 1px solid #E4E4E7; background: #E9E4DC; color: #18181B; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center">T</a>
+      </div>
+    </div>
+  </header>
+  <main style="max-width: 1280px; margin: 0 auto; padding: 40px 32px 64px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.02em">お気に入り</h1>
+        <span style="font-size: 13px; color: #52525B">14 枚 · 6 アルバムから</span>
+      </div>
+      <button aria-label="選択" style="height: 36px; padding: 0 14px; border: 1px solid #D4D4D8; border-radius: 18px; background: transparent; color: #18181B; font: inherit; font-size: 14px; font-weight: 600">選択</button>
+    </div>
+    <div role="tablist" aria-label="並び替え" style="display: flex; gap: 8px">
+      <sc-for list="{{sorts}}" as="t" hint-placeholder-count="3">
+        <button role="tab" aria-selected="{{t.selected}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px">
+      <sc-for list="{{photos}}" as="p" hint-placeholder-count="14">
+        <a href="Lightbox.html" aria-label="{{p.label}}" style="aspect-ratio: 1 / 1; position: relative; display: block; overflow: hidden; border-radius: 8px; background: #E4E4E7">
+          <img src="{{p.src}}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFFFFF" aria-hidden="true" style="position: absolute; right: 6px; bottom: 6px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4))"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>
+        </a>
+      </sc-for>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sort: 'new' };
+  }
+  renderVals() {
+    const ids = ['../images/photo08.jpg', '../images/photo06.jpg', '../images/photo13.jpg', '../images/photo10.jpg', '../images/photo12.jpg', '../images/photo02.jpg', '../images/photo07.jpg', '../images/photo01.jpg', '../images/photo04.jpg', '../images/photo11.jpg', '../images/photo03.jpg', '../images/photo14.jpg', '../images/photo05.jpg', '../images/photo09.jpg'];
+    const list = this.state.sort === 'old' ? [...ids].reverse() : ids;
+    const photos = list.map((id, k) => ({ src: id, label: 'お気に入りの写真 ' + (k + 1) }));
+    const defs = [
+      { id: 'new', label: '新しい順' },
+      { id: 'old', label: '古い順' },
+      { id: 'album', label: 'アルバム別' }
+    ];
+    const sorts = defs.map((t) => {
+      const on = this.state.sort === t.id;
+      return {
+        ...t,
+        selected: on ? 'true' : 'false',
+        pick: () => this.setState({ sort: t.id }),
+        style: 'height: 36px; padding: 0 16px; border-radius: 18px; font: inherit; font-size: 14px; font-weight: 600; ' + (on ? 'border: 1px solid #18181B; background: #18181B; color: #FFFFFF' : 'border: 1px solid #D4D4D8; background: transparent; color: #18181B')
+      };
+    });
+    return { photos, sorts };
+  }
+}
+</script>
+</body>
+</html>
