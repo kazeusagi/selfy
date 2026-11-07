@@ -37,6 +37,11 @@ export async function sendLoginEmail(to: string, url: string) {
   await send(to, "Selfy へのログインリンク", text);
 }
 
+export async function sendLoginCodeEmail(to: string, code: string) {
+  const text = `Selfy のログイン画面で次の確認コードを入力してください。コードの有効期限は10分です。\n\n${code}\n\n心当たりがない場合は、このメールを無視してください。`;
+  await send(to, `Selfy の確認コード: ${code}`, text);
+}
+
 export async function sendInviteEmail(to: string, inviter: string, albumTitle: string, url: string) {
   const text = `${inviter} さんが Selfy のアルバム「${albumTitle}」にあなたを招待しました。\n\n次のリンクを開き、このメールアドレスでログインしてください。\n\n${url}\n\n心当たりがない場合は、このメールを無視してください。`;
   await send(to, `${inviter} さんからアルバムの招待が届いています`, text);

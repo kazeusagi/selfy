@@ -36,6 +36,8 @@ export const photos = sqliteTable(
     camera: text("camera"),
     exposure: text("exposure"),
     favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
+    // オーナーが一覧から外した写真。招待された人や共有リンクにも見せない
+    hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
     createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   },
   (t) => [

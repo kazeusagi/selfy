@@ -1,11 +1,12 @@
 import { useRouter } from "@void/react";
 import { HeartIcon, HeartOffIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { type CSSProperties, useMemo, useState } from "react";
 import { UploadDialog } from "@/components/album-dialogs";
 import { BottomNav } from "@/components/bottom-nav";
 import { Lightbox } from "@/components/lightbox";
 import { MainHeader } from "@/components/main-header";
 import { Button } from "@/components/ui/button";
+import { MOBILE_COLUMNS_CLASS, useGridColumns } from "@/hooks/use-grid-columns";
 import { formatCount } from "@/lib/format";
 import { photoUrl } from "@/lib/photo-url";
 import { cn } from "@/lib/utils";
@@ -47,26 +48,33 @@ function FavoriteTile({
   photo,
   selecting,
   selected,
+  columns,
   onClick,
 }: {
   photo: Photo;
   selecting: boolean;
   selected: boolean;
+  columns: number;
   onClick: () => void;
 }) {
+  // 1列のときは切り抜かず、写真の縦横比のまま見せる
+  const natural = columns === 1;
   return (
     <button
       type="button"
       aria-label={selecting ? `${photo.fileName} を選択` : `${photo.fileName} を拡大`}
       aria-pressed={selecting ? selected : undefined}
       onClick={onClick}
+      data-photo-id={photo.id}
+      style={natural ? ({ "--photo-ratio": `${photo.width} / ${photo.height}` } as CSSProperties) : undefined}
       className={cn(
+        natural && "max-md:aspect-(--photo-ratio)",
         "relative aspect-square cursor-zoom-in overflow-hidden rounded-lg bg-border max-md:rounded-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         selecting && "cursor-pointer",
       )}
     >
       <img
-        src={photoUrl(photo.id, "thumb")}
+        src={photoUrl(photo.id, columns <= 2 ? "display" : "thumb")}
         alt=""
         loading="lazy"
         className={cn("size-full object-cover", selected && "opacity-60")}
@@ -92,6 +100,7 @@ export default function FavoritesPage({ user, photos, albumOptions, settings }: 
   const [selecting, setSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
+  const grid = useGridColumns<HTMLDivElement>();
 
   const visible = useMemo(() => photos.filter((photo) => overrides[photo.id] ?? true), [photos, overrides]);
   const groups = useMemo(() => groupPhotos(visible, sort), [visible, sort]);
@@ -174,30 +183,33 @@ export default function FavoritesPage({ user, photos, albumOptions, settings }: 
             </button>
           ))}
         </div>
-        {visible.length === 0 ? (
-          <p className="py-16 text-center text-sm text-muted-foreground">
-            お気に入りの写真はまだありません
-          </p>
-        ) : (
-          groups.map((group) => (
-            <section key={group.id} className="flex flex-col gap-3 max-md:gap-2">
-              {group.title && (
-                <h2 className="text-[15px] font-semibold max-md:px-4 max-md:text-sm">{group.title}</h2>
-              )}
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-1.5 max-md:grid-cols-3 max-md:gap-0.5">
-                {group.photos.map((photo) => (
-                  <FavoriteTile
-                    key={photo.id}
-                    photo={photo}
-                    selecting={selecting}
-                    selected={selectedIds.includes(photo.id)}
-                    onClick={() => tap(photo)}
-                  />
-                ))}
-              </div>
-            </section>
-          ))
-        )}
+        <div ref={grid.ref} style={grid.style} className="flex flex-col max-md:touch-pan-x max-md:touch-pan-y gap-5 max-md:gap-3.5">
+          {visible.length === 0 ? (
+            <p className="py-16 text-center text-sm text-muted-foreground">
+              お気に入りの写真はまだありません
+            </p>
+          ) : (
+            groups.map((group) => (
+              <section key={group.id} className="flex flex-col gap-3 max-md:gap-2">
+                {group.title && (
+                  <h2 className="text-[15px] font-semibold max-md:px-4 max-md:text-sm">{group.title}</h2>
+                )}
+                <div className={`grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-1.5 max-md:gap-0.5 ${MOBILE_COLUMNS_CLASS}`}>
+                  {group.photos.map((photo) => (
+                    <FavoriteTile
+                      key={photo.id}
+                      photo={photo}
+                      selecting={selecting}
+                      selected={selectedIds.includes(photo.id)}
+                      columns={grid.columns}
+                      onClick={() => tap(photo)}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))
+          )}
+        </div>
       </main>
 
       {selecting && selectedIds.length > 0 && (

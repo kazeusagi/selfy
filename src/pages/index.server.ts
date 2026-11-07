@@ -21,9 +21,10 @@ export const loader = defineHandler(async (c) => {
       ownerId: albums.ownerId,
       title: albums.title,
       createdAt: albums.createdAt,
-      count: sql<number>`count(${photos.id})`,
+      // 非表示の写真は枚数や日付に数えないが、保存容量には含める
+      count: sql<number>`count(case when not ${photos.hidden} then ${photos.id} end)`,
       bytes: sql<number>`coalesce(sum(${photos.storedBytes}), 0)`,
-      lastTakenAt: sql<string | null>`max(${photos.takenAt})`,
+      lastTakenAt: sql<string | null>`max(case when not ${photos.hidden} then ${photos.takenAt} end)`,
     })
     .from(albums)
     .leftJoin(photos, eq(photos.albumId, albums.id))
@@ -42,7 +43,7 @@ export const loader = defineHandler(async (c) => {
     })
     .from(photos)
     .innerJoin(albums, eq(albums.id, photos.albumId))
-    .where(visible)
+    .where(and(visible, eq(photos.hidden, false)))
     .as("ranked");
   const covers = await db.select().from(ranked).where(lte(ranked.rank, 3)).orderBy(sql`${ranked.rank}`);
 
@@ -79,7 +80,9 @@ export const loader = defineHandler(async (c) => {
       .selectDistinct({ albumId: photos.albumId })
       .from(photos)
       .innerJoin(albums, eq(albums.id, photos.albumId))
-      .where(and(visible, sql`(${contains(photos.fileName)} or ${contains(photos.camera)})`));
+      .where(
+        and(visible, eq(photos.hidden, false), sql`(${contains(photos.fileName)} or ${contains(photos.camera)})`),
+      );
     matchedIds = new Set(hits.map((hit) => hit.albumId));
     for (const album of summaries) {
       if (album.title.toLowerCase().includes(q.toLowerCase())) matchedIds.add(album.id);

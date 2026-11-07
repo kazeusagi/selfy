@@ -2,6 +2,8 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   DownloadIcon,
+  EyeIcon,
+  EyeOffIcon,
   HeartIcon,
   InfoIcon,
   Trash2Icon,
@@ -26,6 +28,7 @@ export type LightboxPhoto = {
   camera: string | null;
   exposure: string | null;
   favorite: boolean;
+  hidden?: boolean;
   latitude: number | null;
   longitude: number | null;
   addedBy: string | null;
@@ -67,6 +70,7 @@ export function Lightbox<T extends LightboxPhoto>({
   onIndexChange,
   onClose,
   onToggleFavorite,
+  onToggleHidden,
   onDelete,
 }: {
   photos: T[];
@@ -77,6 +81,7 @@ export function Lightbox<T extends LightboxPhoto>({
   onIndexChange: (index: number) => void;
   onClose: () => void;
   onToggleFavorite?: (photo: T) => void;
+  onToggleHidden?: (photo: T) => void;
   onDelete?: (photo: T) => void;
 }) {
   // スマホでは詳細が写真に重なるので、閉じた状態から始める
@@ -129,6 +134,19 @@ export function Lightbox<T extends LightboxPhoto>({
           onClick={() => onToggleFavorite(photo)}
         >
           <HeartIcon className={cn("size-5 max-md:size-6", photo.favorite && "fill-current")} />
+        </ToolButton>
+      )}
+      {onToggleHidden && (
+        <ToolButton
+          aria-label={photo.hidden ? "表示する" : "非表示にする"}
+          title={photo.hidden ? "表示する" : "非表示にする"}
+          onClick={() => onToggleHidden(photo)}
+        >
+          {photo.hidden ? (
+            <EyeIcon className="size-5 max-md:size-6" />
+          ) : (
+            <EyeOffIcon className="size-5 max-md:size-6" />
+          )}
         </ToolButton>
       )}
       {canDownload && (

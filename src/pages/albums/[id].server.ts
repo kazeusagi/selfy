@@ -1,8 +1,8 @@
-import { albumMembers, photos, shareLinks } from "@schema";
+import { albumMembers, albums, photos, shareLinks } from "@schema";
 import { defineHandler, defineHead } from "void";
 import type { InferProps } from "void";
 import { getUser } from "void/auth";
-import { asc, db, eq } from "void/db";
+import { and, asc, db, eq, ne } from "void/db";
 import { canAddPhotos, canDeletePhoto, findAlbumAccess, isLinkActive } from "@/server/access";
 import { listAllowedUsers } from "@/server/allowed-emails";
 import { getUserSettings } from "@/server/settings";
@@ -19,7 +19,7 @@ export const loader = defineHandler(async (c) => {
   const { album, role } = access;
   const isOwner = role === "owner";
 
-  const [rows, [link], memberRows, settings, users] = await Promise.all([
+  const [rows, [link], memberRows, settings, users, moveTargets] = await Promise.all([
     db
       .select({
         id: photos.id,
@@ -34,9 +34,11 @@ export const loader = defineHandler(async (c) => {
         camera: photos.camera,
         exposure: photos.exposure,
         favorite: photos.favorite,
+        hidden: photos.hidden,
       })
       .from(photos)
-      .where(eq(photos.albumId, album.id))
+      // 非表示の写真はオーナーにだけ渡す
+      .where(and(eq(photos.albumId, album.id), isOwner ? undefined : eq(photos.hidden, false)))
       .orderBy(asc(photos.takenAt), asc(photos.createdAt)),
     db
       .select({
@@ -54,6 +56,14 @@ export const loader = defineHandler(async (c) => {
       .orderBy(asc(albumMembers.createdAt)),
     getUserSettings(user.id),
     isOwner ? listAllowedUsers() : [],
+    // 移動先は自分のアルバムだけ
+    isOwner
+      ? db
+          .select({ id: albums.id, title: albums.title })
+          .from(albums)
+          .where(and(eq(albums.ownerId, user.id), ne(albums.id, album.id)))
+          .orderBy(asc(albums.title))
+      : [],
   ]);
 
   const [owner] = await findUsersByIds([album.ownerId]);
@@ -79,6 +89,7 @@ export const loader = defineHandler(async (c) => {
     // メールアドレスはオーナーにだけ渡す
     members: isOwner ? members : [],
     candidates,
+    moveTargets,
     avatars: [owner, ...members].map((member) => initialOf(member)),
     shareLink: isOwner && link ? { ...link, active: isLinkActive(link) } : null,
     settings,

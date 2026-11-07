@@ -1,4 +1,4 @@
-import { MailIcon } from "lucide-react";
+import { KeyRoundIcon, MailIcon } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { LogoMark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -143,9 +143,18 @@ function initialError(linkError: string | null) {
     : "ログインリンクが無効か、期限が切れています。もう一度お試しください。";
 }
 
+const CODE_ERRORS: Record<string, string> = {
+  INVALID_OTP: "コードが正しくありません。",
+  OTP_EXPIRED: "コードの期限が切れています。もう一度送信してください。",
+  TOO_MANY_ATTEMPTS: "入力の回数が上限に達しました。もう一度コードを送信してください。",
+};
+
 export default function LoginPage({ linkError }: Props) {
   const [email, setEmail] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
+  // コードを送ったアドレス。入力欄を出し、ログインにもこのアドレスを使う
+  const [codeSentTo, setCodeSentTo] = useState<string | null>(null);
+  const [code, setCode] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<ReactNode>(initialError(linkError));
 
@@ -163,9 +172,11 @@ export default function LoginPage({ linkError }: Props) {
     }
   }
 
+  // Enter はリンクの送信に割り当て、コードは専用のボタンから送る
   async function sendLink(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    setCodeSentTo(null);
     setPending(true);
     const { error } = await authClient.signIn.magicLink({
       email,
@@ -177,6 +188,38 @@ export default function LoginPage({ linkError }: Props) {
       setError(error.code === EMAIL_NOT_ALLOWED ? NOT_ALLOWED_MESSAGE : "ログインリンクを送信できませんでした。");
     }
     else setSentTo(email);
+  }
+
+  async function sendCode(target: string) {
+    setError(null);
+    setSentTo(null);
+    setPending(true);
+    const { error } = await authClient.emailOtp.sendVerificationOtp({ email: target, type: "sign-in" });
+    setPending(false);
+    if (error) {
+      setError(error.code === EMAIL_NOT_ALLOWED ? NOT_ALLOWED_MESSAGE : "確認コードを送信できませんでした。");
+      return;
+    }
+    setCode("");
+    setCodeSentTo(target);
+  }
+
+  async function signInWithCode(event: FormEvent) {
+    event.preventDefault();
+    if (!codeSentTo) return;
+    setError(null);
+    setPending(true);
+    const { error } = await authClient.signIn.emailOtp({ email: codeSentTo, otp: code.trim() });
+    if (!error) {
+      window.location.href = "/";
+      return;
+    }
+    setPending(false);
+    setError(
+      error.code === EMAIL_NOT_ALLOWED
+        ? NOT_ALLOWED_MESSAGE
+        : (CODE_ERRORS[error.code ?? ""] ?? "ログインできませんでした。もう一度お試しください。"),
+    );
   }
 
   return (
@@ -246,16 +289,70 @@ export default function LoginPage({ linkError }: Props) {
               onChange={(event) => setEmail(event.target.value)}
               className="h-12 rounded-xl px-3.5 text-[15px] max-md:h-[50px] max-md:rounded-[14px] max-md:text-base md:text-[15px]"
             />
-            <Button
-              type="submit"
-              variant="surface"
-              disabled={pending}
-              className="h-12 gap-2 rounded-xl text-[15px] font-semibold max-md:h-[50px] max-md:rounded-[14px]"
-            >
-              <MailIcon className="size-[18px] max-md:hidden" />
-              ログインリンクを送る
-            </Button>
+            <div className="grid grid-cols-2 gap-2.5">
+              <Button
+                type="submit"
+                variant="surface"
+                disabled={pending}
+                className="h-12 gap-2 rounded-xl text-[15px] font-semibold max-md:h-[50px] max-md:rounded-[14px]"
+              >
+                <MailIcon className="size-[18px] max-md:hidden" />
+                リンクを送る
+              </Button>
+              <Button
+                type="button"
+                variant="surface"
+                disabled={pending}
+                onClick={(event) => {
+                  // 送信ボタンと同じく、未入力や形式の誤りはブラウザの検証で知らせる
+                  const form = event.currentTarget.form;
+                  if (form?.reportValidity()) void sendCode(email);
+                }}
+                className="h-12 gap-2 rounded-xl text-[15px] font-semibold max-md:h-[50px] max-md:rounded-[14px]"
+              >
+                <KeyRoundIcon className="size-[18px] max-md:hidden" />
+                コードを送る
+              </Button>
+            </div>
           </form>
+          {codeSentTo && (
+            <form className="flex flex-col gap-2.5" onSubmit={signInWithCode}>
+              <label htmlFor="code" className="text-[13px] font-medium">
+                確認コード
+              </label>
+              <p className="text-sm leading-[1.7] text-muted-foreground">
+                {codeSentTo} に6桁のコードを送りました。有効期限は10分です。
+              </p>
+              <Input
+                id="code"
+                required
+                autoFocus
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                placeholder="123456"
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
+                className="h-12 rounded-xl px-3.5 text-center font-mono text-xl tracking-[0.4em] max-md:h-[50px] max-md:rounded-[14px] md:text-xl"
+              />
+              <Button
+                type="submit"
+                disabled={pending || code.length !== 6}
+                className="h-12 rounded-xl text-[15px] font-semibold max-md:h-[50px] max-md:rounded-[14px]"
+              >
+                ログイン
+              </Button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => void sendCode(codeSentTo)}
+                className="self-center text-[13px] text-muted-foreground underline-offset-2 enabled:cursor-pointer enabled:hover:underline"
+              >
+                コードを再送する
+              </button>
+            </form>
+          )}
           {sentTo && (
             <p role="status" className="text-sm leading-[1.7]">
               {sentTo} にログインリンクを送りました。メールを確認してください。

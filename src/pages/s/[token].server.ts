@@ -1,7 +1,7 @@
 import { albums, photos } from "@schema";
 import { defineHandler, defineHead } from "void";
 import type { InferProps } from "void";
-import { asc, db, eq } from "void/db";
+import { and, asc, db, eq } from "void/db";
 import { findActiveShareLink } from "@/server/access";
 import { getAlbumOwnerSettings } from "@/server/settings";
 
@@ -28,7 +28,7 @@ export const loader = defineHandler(async (c) => {
         longitude: photos.longitude,
       })
       .from(photos)
-      .where(eq(photos.albumId, link.albumId))
+      .where(and(eq(photos.albumId, link.albumId), eq(photos.hidden, false)))
       .orderBy(asc(photos.takenAt), asc(photos.createdAt)),
     getAlbumOwnerSettings(link.albumId),
   ]);

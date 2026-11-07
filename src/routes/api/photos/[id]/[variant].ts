@@ -25,7 +25,10 @@ export const GET = defineHandler(async (c) => {
   let replaced = false;
 
   const user = getUser();
-  if (!user || !(await findAlbumAccess(photo.albumId, user))) {
+  const access = user ? await findAlbumAccess(photo.albumId, user) : undefined;
+  // 非表示の写真はオーナーにしか渡さない
+  if (photo.hidden && access?.role !== "owner") return c.notFound();
+  if (!access) {
     const token = c.req.query("share");
     const link = token ? await findActiveShareLink(token) : undefined;
     const allowed =

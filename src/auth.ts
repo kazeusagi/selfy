@@ -1,10 +1,12 @@
 import { APIError } from "@better-auth/core/error";
 import { passkey } from "@better-auth/passkey";
+import { createAuthMiddleware } from "better-auth/api";
+import { emailOTP } from "better-auth/plugins/email-otp";
 import { magicLink } from "better-auth/plugins/magic-link";
 import { defineAuth } from "void/auth";
 import { EMAIL_NOT_ALLOWED } from "@/lib/auth-errors";
 import { isEmailAllowed } from "@/server/allowed-emails";
-import { sendLoginEmail } from "@/server/login-email";
+import { sendLoginCodeEmail, sendLoginEmail } from "@/server/login-email";
 import { findUsersByIds } from "@/server/users";
 
 function notAllowedError() {
@@ -16,8 +18,15 @@ export default defineAuth(({ defaults, request }) => {
 
   return {
     ...defaults,
-    // ログインはパスキーとメールリンクのみ。パスワードの登録口を残さない
+    // ログインはパスキーとメールのリンクかコードのみ。パスワードの登録口を残さない
     emailAndPassword: { enabled: false },
+    hooks: {
+      // コードの送信処理で投げたエラーは握りつぶされて成功が返るので、送る前に断る
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== "/email-otp/send-verification-otp") return;
+        if (!(await isEmailAllowed(String(ctx.body?.email ?? "")))) throw notAllowedError();
+      }),
+    },
     // どのログイン方法でも通る場所で許可を確かめる。送信時の確認はリンク発行後の取り消しを防げない
     databaseHooks: {
       user: {
@@ -48,6 +57,15 @@ export default defineAuth(({ defaults, request }) => {
         sendMagicLink: async ({ email, url }) => {
           if (!(await isEmailAllowed(email))) throw notAllowedError();
           await sendLoginEmail(email, url);
+        },
+      }),
+      emailOTP({
+        otpLength: 6,
+        expiresIn: 60 * 10,
+        storeOTP: "hashed",
+        sendVerificationOTP: async ({ email, otp, type }) => {
+          if (type !== "sign-in" || !(await isEmailAllowed(email))) return;
+          await sendLoginCodeEmail(email, otp);
         },
       }),
       passkey({ rpName: "Selfy", rpID: hostname, origin }),

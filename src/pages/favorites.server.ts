@@ -33,7 +33,7 @@ export const loader = defineHandler(async (c) => {
       })
       .from(photos)
       .innerJoin(albums, eq(albums.id, photos.albumId))
-      .where(and(eq(albums.ownerId, user.id), eq(photos.favorite, true)))
+      .where(and(eq(albums.ownerId, user.id), eq(photos.favorite, true), eq(photos.hidden, false)))
       .orderBy(desc(photos.takenAt), desc(photos.createdAt)),
     listWritableAlbums(user),
     getUserSettings(user.id),
