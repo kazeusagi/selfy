@@ -1,11 +1,12 @@
 import { useRouter } from "@void/react";
 import { HeartIcon, HeartOffIcon } from "lucide-react";
-import { type CSSProperties, useMemo, useState } from "react";
+import { type CSSProperties, memo, useMemo, useRef, useState } from "react";
 import { UploadDialog } from "@/components/album-dialogs";
 import { BottomNav } from "@/components/bottom-nav";
 import { Lightbox } from "@/components/lightbox";
 import { MainHeader } from "@/components/main-header";
 import { Button } from "@/components/ui/button";
+import { useDragSelect } from "@/hooks/use-drag-select";
 import { MOBILE_COLUMNS_CLASS, useGridColumns } from "@/hooks/use-grid-columns";
 import { formatCount } from "@/lib/format";
 import { photoUrl } from "@/lib/photo-url";
@@ -44,18 +45,19 @@ function groupPhotos(photos: Photo[], sort: Sort) {
   return [...groups.values()];
 }
 
-function FavoriteTile({
+// 1枚選ぶたびに全部を描き直さないよう、変わったタイルだけ描き直す
+const FavoriteTile = memo(function FavoriteTile({
   photo,
   selecting,
   selected,
   columns,
-  onClick,
+  onTap,
 }: {
   photo: Photo;
   selecting: boolean;
   selected: boolean;
   columns: number;
-  onClick: () => void;
+  onTap: (photo: Photo) => void;
 }) {
   // 1列のときは切り抜かず、写真の縦横比のまま見せる
   const natural = columns === 1;
@@ -64,31 +66,38 @@ function FavoriteTile({
       type="button"
       aria-label={selecting ? `${photo.fileName} を選択` : `${photo.fileName} を拡大`}
       aria-pressed={selecting ? selected : undefined}
-      onClick={onClick}
+      onClick={() => onTap(photo)}
       data-photo-id={photo.id}
       style={natural ? ({ "--photo-ratio": `${photo.width} / ${photo.height}` } as CSSProperties) : undefined}
       className={cn(
         natural && "max-md:aspect-(--photo-ratio)",
-        "relative aspect-square cursor-zoom-in overflow-hidden rounded-lg bg-border max-md:rounded-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "relative aspect-square cursor-zoom-in overflow-hidden rounded-lg bg-border select-none [-webkit-touch-callout:none] max-md:rounded-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         selecting && "cursor-pointer",
+        // スマホでは枠を内側に太くし、その分だけ写真を中央に縮める
+        "max-md:transition-[padding] max-md:duration-150",
+        selected && "max-md:bg-primary max-md:p-1.5",
       )}
     >
       <img
         src={photoUrl(photo.id, columns <= 2 ? "display" : "thumb")}
         alt=""
         loading="lazy"
-        className={cn("size-full object-cover", selected && "opacity-60")}
+        draggable={false}
+        className={cn("size-full object-cover", selected && "md:opacity-60 max-md:rounded-sm")}
       />
       <HeartIcon
         aria-hidden="true"
-        className="absolute right-1.5 bottom-1.5 size-4 fill-white text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
+        className={cn(
+          "pointer-events-none absolute size-4 fill-white text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]",
+          selected ? "right-1.5 bottom-1.5 max-md:right-2.5 max-md:bottom-2.5" : "right-1.5 bottom-1.5",
+        )}
       />
       {selected && (
-        <span aria-hidden="true" className="absolute inset-0 border-[3px] border-primary max-md:border-2" />
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0 border-[3px] border-primary max-md:hidden" />
       )}
     </button>
   );
-}
+});
 
 export default function FavoritesPage({ user, photos, albumOptions, settings }: Props) {
   const router = useRouter();
@@ -106,6 +115,17 @@ export default function FavoritesPage({ user, photos, albumOptions, settings }: 
   const groups = useMemo(() => groupPhotos(visible, sort), [visible, sort]);
   const ordered = groups.flatMap((group) => group.photos);
   const albumCount = new Set(visible.map((photo) => photo.albumId)).size;
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+
+  // 長押しで選択を始め、そのまま指を動かすと範囲で選べる
+  function select(list: Photo[], on: boolean) {
+    setSelecting(true);
+    const ids = new Set(list.map((photo) => photo.id));
+    setSelectedIds((current) =>
+      on ? [...new Set([...current, ...ids])] : current.filter((id) => !ids.has(id)),
+    );
+  }
+  useDragSelect(grid.ref, ordered, selectedSet, select, selecting);
 
   const lightboxPhotos = viewing?.list.map((photo) => ({
     ...photo,
@@ -131,6 +151,10 @@ export default function FavoritesPage({ user, photos, albumOptions, settings }: 
     setPending(false);
     stopSelecting();
   }
+
+  const tapRef = useRef(tap);
+  tapRef.current = tap;
+  const onTap = useMemo(() => (photo: Photo) => tapRef.current(photo), []);
 
   function tap(photo: Photo) {
     if (!selecting) {
@@ -183,7 +207,7 @@ export default function FavoritesPage({ user, photos, albumOptions, settings }: 
             </button>
           ))}
         </div>
-        <div ref={grid.ref} style={grid.style} className="flex flex-col max-md:touch-pan-x max-md:touch-pan-y gap-5 max-md:gap-3.5">
+        <div ref={grid.ref} style={grid.style} className="flex flex-col gap-5 max-md:touch-pan-y max-md:gap-3.5">
           {visible.length === 0 ? (
             <p className="py-16 text-center text-sm text-muted-foreground">
               お気に入りの写真はまだありません
@@ -200,9 +224,9 @@ export default function FavoritesPage({ user, photos, albumOptions, settings }: 
                       key={photo.id}
                       photo={photo}
                       selecting={selecting}
-                      selected={selectedIds.includes(photo.id)}
+                      selected={selectedSet.has(photo.id)}
                       columns={grid.columns}
-                      onClick={() => tap(photo)}
+                      onTap={onTap}
                     />
                   ))}
                 </div>

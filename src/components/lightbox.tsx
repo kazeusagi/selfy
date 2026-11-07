@@ -10,7 +10,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import { type ComponentProps, type TouchEvent, useEffect, useRef, useState } from "react";
+import { type ComponentProps, type MouseEvent, type TouchEvent, useEffect, useRef, useState } from "react";
 import { SheetHandle } from "@/components/ui/dialog";
 import { formatBytes, formatDateTime, formatShortDateTime } from "@/lib/format";
 import { photoUrl } from "@/lib/photo-url";
@@ -104,6 +104,40 @@ export function Lightbox<T extends LightboxPhoto>({
     if (Math.abs(dx) >= SWIPE_DISTANCE && Math.abs(dx) > Math.abs(touch.clientY - start.y)) {
       step(dx < 0 ? 1 : -1);
     }
+  }
+
+  // ブラウザの戻るで写真一覧に戻れるよう、開いている間だけ同じ URL の履歴を1つ積む
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    let pushed = true;
+    history.pushState({ ...history.state, selfyLightbox: true }, "");
+    const onPopState = () => {
+      if (!pushed) return;
+      pushed = false;
+      closeRef.current();
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      // ×ボタンや削除で閉じたときは、積んだ履歴を戻しておく
+      if (pushed) history.back();
+    };
+  }, []);
+
+  // 写真の外の黒い部分を押したら閉じる。写真は枠いっぱいに縮小して置くので、余白も img の上にある
+  function onStageClick(event: MouseEvent<HTMLDivElement>) {
+    if (event.target === event.currentTarget) return onClose();
+    if (!(event.target instanceof HTMLImageElement)) return;
+    const box = event.target.getBoundingClientRect();
+    const ratio = photo.width / photo.height;
+    const width = Math.min(box.width, box.height * ratio);
+    const height = Math.min(box.height, box.width / ratio);
+    const left = box.left + (box.width - width) / 2;
+    const top = box.top + (box.height - height) / 2;
+    const inside =
+      event.clientX >= left && event.clientX <= left + width && event.clientY >= top && event.clientY <= top + height;
+    if (!inside) onClose();
   }
 
   useEffect(() => {
@@ -213,6 +247,7 @@ export function Lightbox<T extends LightboxPhoto>({
           <div className="flex min-h-0 flex-1 flex-wrap max-md:flex-nowrap">
             <div
               className="flex min-h-[360px] min-w-0 flex-[999_1_560px] touch-pan-y touch-pinch-zoom items-center justify-center gap-3 px-4 pt-2 pb-6 max-md:relative max-md:min-h-0 max-md:flex-1 max-md:p-0"
+              onClick={onStageClick}
               onTouchStart={onTouchStart}
               onTouchEnd={onTouchEnd}
             >
