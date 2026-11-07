@@ -1,7 +1,7 @@
 name: Deploy to Cloudflare
 on:
   push:
-    branches: [maain]
+    branches: [not]
 
 concurrency:
   group: void-cloudflare-deploy-${{ github.repository }}-${{ github.ref }}
