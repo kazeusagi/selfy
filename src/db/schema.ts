@@ -73,6 +73,12 @@ export const albumMembers = sqliteTable(
   ],
 );
 
+// 登録とログインを許可するメールアドレス。比較できるよう小文字で持つ
+export const allowedEmails = sqliteTable("allowed_emails", {
+  email: text("email").primaryKey(),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+});
+
 export const userSettings = sqliteTable("user_settings", {
   userId: text("user_id").primaryKey(),
   keepOriginal: integer("keep_original", { mode: "boolean" }).notNull().default(true),

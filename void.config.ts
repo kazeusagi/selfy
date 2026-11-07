@@ -13,6 +13,8 @@ export default defineConfig({
     "compatibility_date": "2026-02-24"
   },
   "cloudflare": {
-    "routes": [{ "pattern": "selfy.kazeusagi.dev", "custom_domain": true }]
+    "routes": [{ "pattern": "selfy.kazeusagi.dev", "custom_domain": true }],
+    "workers_dev": false,
+    "preview_urls": false
   }
 });

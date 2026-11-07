@@ -1,7 +1,7 @@
 import { Link, useRouter } from "@void/react";
 import { ChevronRightIcon, KeyRoundIcon, MonitorSmartphoneIcon, Trash2Icon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 import { AlbumTitleDialog, UploadDialog } from "@/components/album-dialogs";
 import { userInitial } from "@/components/account-link";
 import { BottomNav } from "@/components/bottom-nav";
@@ -15,6 +15,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { authClient } from "@/lib/auth-client";
 import { formatBytes } from "@/lib/format";
@@ -307,7 +308,100 @@ function SessionsDialog({
   );
 }
 
-type OpenDialog = "name" | "passkeys" | "sessions" | "shared" | null;
+function AllowedEmailsDialog({
+  open,
+  onOpenChange,
+  emails,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  emails: string[];
+}) {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function send(input: string, init: RequestInit, failure: string) {
+    setPending(true);
+    setError(null);
+    const response = await window.fetch(input, init);
+    if (response.ok) await router.refresh({ preserveScroll: true });
+    else setError(failure);
+    setPending(false);
+    return response.ok;
+  }
+
+  async function add(event: FormEvent) {
+    event.preventDefault();
+    const added = await send(
+      "/api/admin/allowed-emails",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      },
+      "メールアドレスを追加できませんでした",
+    );
+    if (added) setEmail("");
+  }
+
+  const remove = (target: string) =>
+    send(
+      `/api/admin/allowed-emails/${encodeURIComponent(target)}`,
+      { method: "DELETE" },
+      "メールアドレスを削除できませんでした",
+    );
+
+  return (
+    <ListDialog open={open} onOpenChange={onOpenChange} title="登録を許可するメールアドレス">
+      <p className="text-[13px] leading-[1.7] text-muted-foreground">
+        ここにあるアドレスと管理者だけが、登録とログインができます。登録した人はアルバムの招待先に表示されます。削除すると、その人はログアウトされます。
+      </p>
+      <form className="flex gap-2" onSubmit={(event) => void add(event)}>
+        <Input
+          type="email"
+          required
+          aria-label="許可するメールアドレス"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          className="h-10 min-w-0 flex-1 rounded-xl"
+        />
+        <Button type="submit" size="pill" disabled={pending} className="font-semibold">
+          追加
+        </Button>
+      </form>
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      {emails.length === 0 ? (
+        <p className="py-4 text-center text-sm text-muted-foreground">許可しているメールアドレスはありません</p>
+      ) : (
+        <ul className="flex flex-col">
+          {emails.map((target) => (
+            <li key={target} className="flex min-h-[52px] items-center gap-3">
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">{target}</span>
+              <Button
+                variant="ghost"
+                size="icon-pill"
+                aria-label={`${target} を削除`}
+                disabled={pending}
+                onClick={() => void remove(target)}
+              >
+                <Trash2Icon />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </ListDialog>
+  );
+}
+
+type OpenDialog = "name" | "passkeys" | "sessions" | "shared" | "allowedEmails" | null;
 
 export default function SettingsPage({
   user,
@@ -318,6 +412,7 @@ export default function SettingsPage({
   sessionCount,
   sharedAlbums,
   albumOptions,
+  allowedEmails,
 }: Props) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
@@ -443,6 +538,18 @@ export default function SettingsPage({
           </Card>
         </Section>
 
+        {allowedEmails && (
+          <Section title="管理">
+            <Card>
+              <Row
+                label="登録を許可するメールアドレス"
+                value={`${allowedEmails.length} 件`}
+                onClick={() => setDialog("allowedEmails")}
+              />
+            </Card>
+          </Section>
+        )}
+
         <div className="flex flex-col gap-3">
           <Button
             variant="surface"
@@ -476,6 +583,7 @@ export default function SettingsPage({
       />
       <PasskeysDialog {...dialogProps("passkeys")} />
       <SessionsDialog {...dialogProps("sessions")} currentId={sessionId} />
+      {allowedEmails && <AllowedEmailsDialog {...dialogProps("allowedEmails")} emails={allowedEmails} />}
       <ListDialog {...dialogProps("shared")} title="共有中のアルバム">
         {sharedAlbums.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">共有中のアルバムはありません</p>

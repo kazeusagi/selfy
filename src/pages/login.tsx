@@ -1,9 +1,10 @@
 import { MailIcon } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 import { LogoMark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
+import { EMAIL_NOT_ALLOWED } from "@/lib/auth-errors";
 import type { Props } from "./login.server";
 
 // [ファイル名, 幅, 高さ]
@@ -120,13 +121,33 @@ function PasskeyIcon() {
   );
 }
 
+const NOT_ALLOWED_MESSAGE = (
+  <>
+    このメールアドレスは登録が許可されていません。利用するには管理者に問い合わせるか、
+    <a
+      href="https://github.com/kazeusagi/selfy"
+      target="_blank"
+      rel="noreferrer"
+      className="underline underline-offset-2"
+    >
+      https://github.com/kazeusagi/selfy
+    </a>
+    にアクセスしてセルフホストしてください。
+  </>
+);
+
+function initialError(linkError: string | null) {
+  if (!linkError) return null;
+  return linkError === EMAIL_NOT_ALLOWED
+    ? NOT_ALLOWED_MESSAGE
+    : "ログインリンクが無効か、期限が切れています。もう一度お試しください。";
+}
+
 export default function LoginPage({ linkError }: Props) {
   const [email, setEmail] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState(
-    linkError ? "ログインリンクが無効か、期限が切れています。もう一度お試しください。" : null,
-  );
+  const [error, setError] = useState<ReactNode>(initialError(linkError));
 
   async function signInWithPasskey() {
     setError(null);
@@ -135,7 +156,9 @@ export default function LoginPage({ linkError }: Props) {
       window.location.href = "/";
     } else {
       setError(
-        "パスキーでログインできませんでした。初めての場合はメールでログインし、設定からパスキーを登録してください。",
+        "code" in error && error.code === EMAIL_NOT_ALLOWED
+          ? NOT_ALLOWED_MESSAGE
+          : "パスキーでログインできませんでした。初めての場合はメールでログインし、設定からパスキーを登録してください。",
       );
     }
   }
@@ -150,7 +173,9 @@ export default function LoginPage({ linkError }: Props) {
       errorCallbackURL: "/login?error=link",
     });
     setPending(false);
-    if (error) setError("ログインリンクを送信できませんでした。");
+    if (error) {
+      setError(error.code === EMAIL_NOT_ALLOWED ? NOT_ALLOWED_MESSAGE : "ログインリンクを送信できませんでした。");
+    }
     else setSentTo(email);
   }
 
@@ -195,7 +220,7 @@ export default function LoginPage({ linkError }: Props) {
           <div className="flex flex-col gap-2 max-md:gap-1.5">
             <h1 className="text-[28px] font-bold tracking-[-0.01em] max-md:text-[26px] max-md:tracking-normal">おかえりなさい</h1>
             <p className="text-[15px] leading-[1.7] text-muted-foreground max-md:text-sm">
-              あなたの写真は、あなたのCloudflareアカウントにだけ保存されます。
+              あなたの写真は、あなただけのストレージに保存されます。
             </p>
           </div>
           <Button className="h-[52px] gap-2.5 rounded-xl text-[15px] font-semibold max-md:h-[54px] max-md:rounded-[14px] max-md:text-base" onClick={signInWithPasskey}>

@@ -6,7 +6,7 @@ export type Props = InferProps<typeof loader>;
 
 export const loader = defineHandler((c) => {
   if (getUser()) return c.redirect("/");
-  return { linkError: c.req.query("error") !== undefined };
+  return { linkError: c.req.query("error") ?? null };
 });
 
 export const head = defineHead(() => ({ title: "ログイン" }));

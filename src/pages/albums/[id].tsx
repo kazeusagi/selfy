@@ -44,6 +44,7 @@ export default function AlbumPage({
   startSharing,
   photos,
   members,
+  candidates,
   avatars,
   shareLink,
   settings,
@@ -299,6 +300,7 @@ export default function AlbumPage({
           albumTitle={album.title}
           user={user}
           members={members}
+          candidates={candidates}
           link={shareLink}
           defaultExpiry={settings.defaultExpiry}
           stripGps={settings.stripGps}

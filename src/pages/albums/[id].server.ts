@@ -4,6 +4,7 @@ import type { InferProps } from "void";
 import { getUser } from "void/auth";
 import { asc, db, eq } from "void/db";
 import { canAddPhotos, canDeletePhoto, findAlbumAccess, isLinkActive } from "@/server/access";
+import { listAllowedUsers } from "@/server/allowed-emails";
 import { getUserSettings } from "@/server/settings";
 import { addAddedBy, findUsersByEmails, findUsersByIds, initialOf } from "@/server/users";
 
@@ -18,7 +19,7 @@ export const loader = defineHandler(async (c) => {
   const { album, role } = access;
   const isOwner = role === "owner";
 
-  const [rows, [link], memberRows, settings] = await Promise.all([
+  const [rows, [link], memberRows, settings, users] = await Promise.all([
     db
       .select({
         id: photos.id,
@@ -52,6 +53,7 @@ export const loader = defineHandler(async (c) => {
       .where(eq(albumMembers.albumId, album.id))
       .orderBy(asc(albumMembers.createdAt)),
     getUserSettings(user.id),
+    isOwner ? listAllowedUsers() : [],
   ]);
 
   const [owner] = await findUsersByIds([album.ownerId]);
@@ -61,6 +63,8 @@ export const loader = defineHandler(async (c) => {
     ...member,
     name: names.get(member.email) ?? "",
   }));
+  const memberEmails = new Set(memberRows.map((member) => member.email));
+  const candidates = users.filter((other) => other.id !== user.id && !memberEmails.has(other.email));
 
   return {
     user: { name: user.name, email: user.email },
@@ -74,6 +78,7 @@ export const loader = defineHandler(async (c) => {
     ),
     // メールアドレスはオーナーにだけ渡す
     members: isOwner ? members : [],
+    candidates,
     avatars: [owner, ...members].map((member) => initialOf(member)),
     shareLink: isOwner && link ? { ...link, active: isLinkActive(link) } : null,
     settings,

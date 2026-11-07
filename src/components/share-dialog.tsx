@@ -44,6 +44,8 @@ export type MemberRole = "viewer" | "contributor";
 
 export type AlbumMember = { id: string; email: string; name: string; role: MemberRole };
 
+export type InviteCandidate = { id: string; email: string; name: string };
+
 const ROLE_LABELS: Record<MemberRole, string> = {
   viewer: "閲覧のみ",
   contributor: "写真の追加も可",
@@ -154,6 +156,7 @@ export function ShareDialog({
   albumTitle,
   user,
   members,
+  candidates,
   link,
   defaultExpiry,
   stripGps,
@@ -164,6 +167,7 @@ export function ShareDialog({
   albumTitle: string;
   user: AccountUser;
   members: AlbumMember[];
+  candidates: InviteCandidate[];
   link: ShareLink | null;
   defaultExpiry: ShareLink["expiry"];
   stripGps: boolean;
@@ -173,7 +177,7 @@ export function ShareDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteeId, setInviteeId] = useState("");
   const [inviteRole, setInviteRole] = useState<MemberRole>("viewer");
 
   useEffect(() => {
@@ -188,7 +192,7 @@ export function ShareDialog({
     if (response.ok) await router.refresh({ preserveScroll: true });
     else {
       const message = response.status === 409 ? "すでに招待しています" : "共有設定を変更できませんでした";
-      setError(response.status === 400 ? "このメールアドレスは招待できません" : message);
+      setError(response.status === 400 ? "このユーザーは招待できません" : message);
     }
     setPending(false);
     return response.ok;
@@ -209,8 +213,8 @@ export function ShareDialog({
 
   async function invite(event: FormEvent) {
     event.preventDefault();
-    const sent = await request(sendJson("POST", { email: inviteEmail.trim(), role: inviteRole }), "members");
-    if (sent) setInviteEmail("");
+    const sent = await request(sendJson("POST", { userId: inviteeId, role: inviteRole }), "members");
+    if (sent) setInviteeId("");
   }
 
   async function copy() {
@@ -247,19 +251,25 @@ export function ShareDialog({
           className="flex flex-wrap gap-2 px-6 pt-5 max-md:px-5 max-md:pt-[18px]"
           onSubmit={invite}
         >
-          <label htmlFor="invite-email" className="w-full text-[13px] font-medium md:hidden">
-            メールアドレスで招待
+          <label htmlFor="invitee" className="w-full text-[13px] font-medium md:hidden">
+            招待する人
           </label>
-          <Input
-            id="invite-email"
-            type="email"
-            required
-            aria-label="招待するメールアドレス"
-            placeholder="メールアドレスで招待"
-            value={inviteEmail}
-            onChange={(event) => setInviteEmail(event.target.value)}
-            className="h-11 min-w-0 flex-[1_1_200px] rounded-xl px-3.5 max-md:h-[46px] max-md:basis-0 max-md:px-3"
-          />
+          <Select value={inviteeId} onValueChange={setInviteeId} disabled={candidates.length === 0}>
+            <SelectTrigger
+              id="invitee"
+              aria-label="招待する人"
+              className="min-w-0 flex-[1_1_200px] rounded-xl px-3.5 data-[size=default]:h-11 max-md:basis-0 max-md:px-3 max-md:text-[15px] max-md:data-[size=default]:h-[46px]"
+            >
+              <SelectValue placeholder={candidates.length ? "招待する人を選択" : "招待できる人はいません"} />
+            </SelectTrigger>
+            <SelectContent>
+              {candidates.map((candidate) => (
+                <SelectItem key={candidate.id} value={candidate.id}>
+                  {candidate.name ? `${candidate.name}（${candidate.email}）` : candidate.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={inviteRole} onValueChange={(role) => setInviteRole(role as MemberRole)}>
             <SelectTrigger aria-label="権限" className="rounded-xl data-[size=default]:h-11 max-md:order-last max-md:w-full max-md:text-[15px]">
               <SelectValue />
@@ -271,7 +281,7 @@ export function ShareDialog({
           </Select>
           <Button
             type="submit"
-            disabled={pending || !inviteEmail.trim()}
+            disabled={pending || !inviteeId}
             className="h-11 rounded-xl px-[18px] font-semibold max-md:h-[46px] max-md:px-4 max-md:text-[15px]"
           >
             招待

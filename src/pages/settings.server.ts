@@ -4,6 +4,7 @@ import type { InferProps } from "void";
 import { getSession } from "void/auth";
 import { db, eq, sql } from "void/db";
 import { isLinkActive, listWritableAlbums } from "@/server/access";
+import { isAdmin, listAllowedEmails } from "@/server/allowed-emails";
 import { getUserSettings } from "@/server/settings";
 
 export type Props = Exclude<InferProps<typeof loader>, Response>;
@@ -13,7 +14,7 @@ export const loader = defineHandler(async (c) => {
   if (!auth) return c.redirect("/login");
   const { user, session } = auth;
 
-  const [storage, owned, links, invited, [passkeys], [sessions], albumOptions, settings] =
+  const [storage, owned, links, invited, [passkeys], [sessions], albumOptions, settings, allowedEmails] =
     await Promise.all([
       db
         .select({
@@ -44,6 +45,7 @@ export const loader = defineHandler(async (c) => {
       ),
       listWritableAlbums(user),
       getUserSettings(user.id),
+      isAdmin(user) ? listAllowedEmails() : null,
     ]);
 
   const sharedIds = new Set([
@@ -63,6 +65,8 @@ export const loader = defineHandler(async (c) => {
     sessionCount: sessions.count,
     sharedAlbums: owned.filter((album) => sharedIds.has(album.id)),
     albumOptions,
+    // 管理者以外には null を返し、管理用の項目を出さない
+    allowedEmails,
   };
 });
 
