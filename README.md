@@ -32,57 +32,6 @@ Selfy は、自分の Cloudflare アカウントで動かすセルフホスト�
 - 🛡️ **招待制** — 管理者が許可したメールアドレスだけが登録・ログインできます
 - 🌗 **ダークモードとスマホ対応**
 
-## 技術スタック
-
-| 分類 | 使っているもの |
-|---|---|
-| フレームワーク | [Void](https://void.cloud) / Vite / React |
-| 実行環境 | Cloudflare Workers |
-| データベース | Cloudflare D1 (Drizzle) |
-| ストレージ | Cloudflare R2 |
-| 認証 | Better Auth (パスキー・マジックリンク・メール OTP) |
-| メール送信 | [Resend](https://resend.com) |
-| UI | Tailwind CSS / shadcn/ui / Radix UI |
-
-## 開発環境の起動
-
-### 必要なもの
-
-- [Bun](https://bun.sh)
-
-### 手順
-
-1. 依存パッケージをインストールします。
-
-   ```sh
-   bun install
-   ```
-
-2. `.env.example` をコピーして `.env` を作り、`ADMIN_EMAIL` を自分のメールアドレスに書き換えます。
-   開発中のメールはローカルの受信箱に届くので、ほかの値はそのままで構いません。
-
-   ```sh
-   cp .env.example .env
-   ```
-
-3. 開発サーバーを起動します。データベースのマイグレーションは起動時に自動で適用されます。
-
-   ```sh
-   bun run dev
-   ```
-
-4. <http://localhost:5173> を開き、`ADMIN_EMAIL` に設定したアドレスでログインします。
-   ログイン用のメールは実際には送られず、起動時にターミナルに表示される
-   `http://localhost:5173/__void/inbox?token=...` の受信箱に届きます。
-
-### よく使うコマンド
-
-| コマンド | 内容 |
-|---|---|
-| `bun run dev` | 開発サーバーを起動 |
-| `bun run build` | 本番用にビルド |
-| `bunx void db generate` | `src/db/schema.ts` の変更からマイグレーションを生成 |
-
 ## セルフホスト
 
 自分の Cloudflare アカウントに Selfy をデプロイする手順です。
@@ -163,6 +112,57 @@ D1・R2 の作成、ビルド、マイグレーションの適用、Worker の�
 独自ドメインで公開する場合は、リポジトリの Variables に `SELFY_DOMAIN` を登録してください。
 また、リポジトリの Secrets に `CLOUDFLARE_API_TOKEN` (Workers Scripts の編集権限と、D1・R2 へのアクセス権を持つトークン) を登録する必要があります。
 詳しくは [Void のドキュメント](https://void.cloud) を参照してください。
+
+## 開発環境の起動
+
+### 技術スタック
+
+| 分類 | 使っているもの |
+|---|---|
+| フレームワーク | [Void](https://void.cloud) / Vite / React |
+| 実行環境 | Cloudflare Workers |
+| データベース | Cloudflare D1 (Drizzle) |
+| ストレージ | Cloudflare R2 |
+| 認証 | Better Auth (パスキー・マジックリンク・メール OTP) |
+| メール送信 | [Resend](https://resend.com) |
+| UI | Tailwind CSS / shadcn/ui / Radix UI |
+
+### 必要なもの
+
+- [Bun](https://bun.sh)
+
+### 手順
+
+1. 依存パッケージをインストールします。
+
+   ```sh
+   bun install
+   ```
+
+2. `.env.example` をコピーして `.env` を作り、`ADMIN_EMAIL` を自分のメールアドレスに書き換えます。
+   開発中のメールはローカルの受信箱に届くので、ほかの値はそのままで構いません。
+
+   ```sh
+   cp .env.example .env
+   ```
+
+3. 開発サーバーを起動します。データベースのマイグレーションは起動時に自動で適用されます。
+
+   ```sh
+   bun run dev
+   ```
+
+4. <http://localhost:5173> を開き、`ADMIN_EMAIL` に設定したアドレスでログインします。
+   ログイン用のメールは実際には送られず、起動時にターミナルに表示される
+   `http://localhost:5173/__void/inbox?token=...` の受信箱に届きます。
+
+### よく使うコマンド
+
+| コマンド | 内容 |
+|---|---|
+| `bun run dev` | 開発サーバーを起動 |
+| `bun run build` | 本番用にビルド |
+| `bunx void db generate` | `src/db/schema.ts` の変更からマイグレーションを生成 |
 
 ## ライセンス
 

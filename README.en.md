@@ -32,57 +32,6 @@ Photos are stored in R2 and data in D1.
 - 🛡️ **Invite only**: only email addresses the admin allows can sign up or log in
 - 🌗 **Dark mode and mobile layouts**
 
-## Tech stack
-
-| Area | What it uses |
-|---|---|
-| Framework | [Void](https://void.cloud) / Vite / React |
-| Runtime | Cloudflare Workers |
-| Database | Cloudflare D1 (Drizzle) |
-| Storage | Cloudflare R2 |
-| Auth | Better Auth (passkeys, magic links, email OTP) |
-| Email | [Resend](https://resend.com) |
-| UI | Tailwind CSS / shadcn/ui / Radix UI |
-
-## Development
-
-### Requirements
-
-- [Bun](https://bun.sh)
-
-### Steps
-
-1. Install dependencies.
-
-   ```sh
-   bun install
-   ```
-
-2. Copy `.env.example` to `.env` and set `ADMIN_EMAIL` to your own email address.
-   In development, emails go to a local inbox, so the other values can stay as they are.
-
-   ```sh
-   cp .env.example .env
-   ```
-
-3. Start the dev server. Database migrations are applied automatically on startup.
-
-   ```sh
-   bun run dev
-   ```
-
-4. Open <http://localhost:5173> and log in with the `ADMIN_EMAIL` address.
-   Login emails are not actually sent. They arrive in the local inbox at
-   `http://localhost:5173/__void/inbox?token=...`, which the dev server prints when it starts.
-
-### Common commands
-
-| Command | What it does |
-|---|---|
-| `bun run dev` | Start the dev server |
-| `bun run build` | Build for production |
-| `bunx void db generate` | Generate a migration from changes to `src/db/schema.ts` |
-
 ## Self-hosting
 
 These steps deploy Selfy to your own Cloudflare account.
@@ -163,6 +112,57 @@ It is currently disabled by pointing it at a branch that doesn't exist. To use i
 To use a custom domain, add a `SELFY_DOMAIN` repository variable.
 You also need to add a `CLOUDFLARE_API_TOKEN` repository secret: a token with Workers Scripts edit permission and access to D1 and R2.
 See the [Void documentation](https://void.cloud) for details.
+
+## Development
+
+### Tech stack
+
+| Area | What it uses |
+|---|---|
+| Framework | [Void](https://void.cloud) / Vite / React |
+| Runtime | Cloudflare Workers |
+| Database | Cloudflare D1 (Drizzle) |
+| Storage | Cloudflare R2 |
+| Auth | Better Auth (passkeys, magic links, email OTP) |
+| Email | [Resend](https://resend.com) |
+| UI | Tailwind CSS / shadcn/ui / Radix UI |
+
+### Requirements
+
+- [Bun](https://bun.sh)
+
+### Steps
+
+1. Install dependencies.
+
+   ```sh
+   bun install
+   ```
+
+2. Copy `.env.example` to `.env` and set `ADMIN_EMAIL` to your own email address.
+   In development, emails go to a local inbox, so the other values can stay as they are.
+
+   ```sh
+   cp .env.example .env
+   ```
+
+3. Start the dev server. Database migrations are applied automatically on startup.
+
+   ```sh
+   bun run dev
+   ```
+
+4. Open <http://localhost:5173> and log in with the `ADMIN_EMAIL` address.
+   Login emails are not actually sent. They arrive in the local inbox at
+   `http://localhost:5173/__void/inbox?token=...`, which the dev server prints when it starts.
+
+### Common commands
+
+| Command | What it does |
+|---|---|
+| `bun run dev` | Start the dev server |
+| `bun run build` | Build for production |
+| `bunx void db generate` | Generate a migration from changes to `src/db/schema.ts` |
 
 ## License
 
