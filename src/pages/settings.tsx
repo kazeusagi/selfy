@@ -1,9 +1,9 @@
 import { Link, useRouter } from "@void/react";
 import { ChevronRightIcon, KeyRoundIcon, MonitorSmartphoneIcon, Trash2Icon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { AlbumTitleDialog, UploadDialog } from "@/components/album-dialogs";
-import { userInitial } from "@/components/account-link";
+import { UserAvatar } from "@/components/account-link";
 import { BottomNav } from "@/components/bottom-nav";
 import { MainHeader } from "@/components/main-header";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogTitle, mobileSheetClassName, SheetHandle }
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -20,6 +21,8 @@ import { Switch } from "@/components/ui/switch";
 import { authClient } from "@/lib/auth-client";
 import { formatBytes } from "@/lib/format";
 import { LOGIN_PHOTO_COUNT } from "@/lib/login-photos";
+import { IMAGE_ACCEPT } from "@/components/upload-status";
+import { uploadAvatar } from "@/lib/upload";
 import { describeUserAgent } from "@/lib/user-agent";
 import { cn } from "@/lib/utils";
 import { version } from "../../package.json";
@@ -401,7 +404,83 @@ function AllowedEmailsDialog({
   );
 }
 
-type OpenDialog = "name" | "passkeys" | "sessions" | "shared" | "allowedEmails" | null;
+function HiddenPasswordDialog({
+  open,
+  onOpenChange,
+  hasPassword,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  hasPassword: boolean;
+}) {
+  const router = useRouter();
+  const [current, setCurrent] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    const response = await window.fetch("/api/hidden/password", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ current, password }),
+    });
+    setPending(false);
+    if (!response.ok) {
+      // HTTPException の message は本文にそのまま入って返る
+      const message = await response.text().catch(() => "");
+      setError(message && message.length < 200 ? message : "保存できませんでした");
+      return;
+    }
+    setCurrent("");
+    setPassword("");
+    onOpenChange(false);
+    await router.refresh({ preserveScroll: true });
+  }
+
+  return (
+    <ListDialog open={open} onOpenChange={onOpenChange} title="非表示の写真のパスワード">
+      <form onSubmit={submit} className="flex flex-col gap-3">
+        {hasPassword && (
+          <Input
+            type="password"
+            aria-label="今のパスワード"
+            placeholder="今のパスワード"
+            autoComplete="current-password"
+            required
+            value={current}
+            onChange={(event) => setCurrent(event.target.value)}
+            className="h-11 rounded-xl"
+          />
+        )}
+        <Input
+          type="password"
+          aria-label="新しいパスワード"
+          placeholder="新しいパスワード（4文字以上）"
+          autoComplete="new-password"
+          required
+          minLength={4}
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          className="h-11 rounded-xl"
+        />
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <Button type="submit" size="pill" className="font-semibold" disabled={pending}>
+          保存
+        </Button>
+      </form>
+    </ListDialog>
+  );
+}
+
+type OpenDialog = "name" | "passkeys" | "sessions" | "shared" | "allowedEmails" | "hiddenPassword" | null;
 
 export default function SettingsPage({
   user,
@@ -413,12 +492,37 @@ export default function SettingsPage({
   sharedAlbums,
   albumOptions,
   allowedEmails,
+  hasHiddenPassword,
 }: Props) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [values, setValues] = useState(settings);
   const [error, setError] = useState<string | null>(null);
+  const avatarInput = useRef<HTMLInputElement>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  async function changeAvatar(file: File | undefined) {
+    if (!file) return;
+    setAvatarError(null);
+    try {
+      const image = await uploadAvatar(file);
+      // セッションに入っている名前やアイコンも新しくするため、Better Auth 経由で書き換える
+      const { error } = await authClient.updateUser({ image });
+      if (error) throw new Error("アイコンを保存できませんでした");
+      await router.refresh({ preserveScroll: true });
+    } catch (cause) {
+      setAvatarError(cause instanceof Error ? cause.message : "アイコンを保存できませんでした");
+    }
+  }
+
+  async function removeAvatar() {
+    setAvatarError(null);
+    await window.fetch("/api/me/avatar", { method: "DELETE" });
+    const { error } = await authClient.updateUser({ image: null });
+    if (error) setAvatarError("アイコンを削除できませんでした");
+    await router.refresh({ preserveScroll: true });
+  }
 
   const dialogProps = (name: OpenDialog) => ({
     open: dialog === name,
@@ -452,9 +556,29 @@ export default function SettingsPage({
         <h1 className="text-[32px] font-bold tracking-[-0.02em] max-md:text-[30px]">設定</h1>
 
         <Card className="flex items-center gap-3.5 p-4">
-          <span className="flex size-[52px] flex-none items-center justify-center rounded-full bg-avatar text-xl font-semibold">
-            {userInitial(user)}
-          </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger aria-label="アイコンを変更" className="cursor-pointer rounded-full">
+              <UserAvatar user={user} className="size-[52px] text-xl" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuItem onSelect={() => avatarInput.current?.click()}>画像を選ぶ</DropdownMenuItem>
+              {user.image && (
+                <DropdownMenuItem variant="destructive" onSelect={() => void removeAvatar()}>
+                  画像を削除
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <input
+            ref={avatarInput}
+            type="file"
+            accept={IMAGE_ACCEPT}
+            hidden
+            onChange={(event) => {
+              void changeAvatar(event.target.files?.[0]);
+              event.target.value = "";
+            }}
+          />
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="truncate text-[17px] font-semibold">{user.name || "あなた"}</span>
             <span className="truncate text-[13px] text-muted-foreground">{user.email}</span>
@@ -467,6 +591,12 @@ export default function SettingsPage({
             編集
           </Button>
         </Card>
+
+        {avatarError && (
+          <p role="alert" className="-mt-3 mx-1 text-sm text-destructive">
+            {avatarError}
+          </p>
+        )}
 
         <Section title="表示">
           <ThemePicker />
@@ -535,6 +665,11 @@ export default function SettingsPage({
               </DropdownMenuContent>
             </DropdownMenu>
             <Row label="共有中のアルバム" value={`${sharedAlbums.length} 件`} onClick={() => setDialog("shared")} />
+            <Row
+              label="非表示の写真のパスワード"
+              value={hasHiddenPassword ? "設定済み" : "未設定"}
+              onClick={() => setDialog("hiddenPassword")}
+            />
           </Card>
         </Section>
 
@@ -582,6 +717,7 @@ export default function SettingsPage({
         }}
       />
       <PasskeysDialog {...dialogProps("passkeys")} />
+      <HiddenPasswordDialog {...dialogProps("hiddenPassword")} hasPassword={hasHiddenPassword} />
       <SessionsDialog {...dialogProps("sessions")} currentId={sessionId} />
       {allowedEmails && <AllowedEmailsDialog {...dialogProps("allowedEmails")} emails={allowedEmails} />}
       <ListDialog {...dialogProps("shared")} title="共有中のアルバム">

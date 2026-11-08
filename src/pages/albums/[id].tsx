@@ -4,7 +4,6 @@ import {
   ChevronLeftIcon,
   DownloadIcon,
   EllipsisIcon,
-  EyeIcon,
   EyeOffIcon,
   FolderInputIcon,
   PencilIcon,
@@ -19,6 +18,7 @@ import { AppHeader, HeaderSearch, MainNav } from "@/components/app-header";
 import { DownloadStatus } from "@/components/download-status";
 import { Lightbox } from "@/components/lightbox";
 import { MobileFab } from "@/components/mobile-fab";
+import { PhotoFilterButton, usePhotoFilter } from "@/components/photo-filter";
 import { PhotoGrid } from "@/components/photo-grid";
 import { type SelectionAction, SelectionBar } from "@/components/selection-bar";
 import { ShareDialog } from "@/components/share-dialog";
@@ -77,10 +77,11 @@ export default function AlbumPage({
         : null;
   const fileInput = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
+  const photoFilter = usePhotoFilter();
   const [openId, setOpenId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
-  const [hiddenIds, setHiddenIds] = useState<Record<string, boolean>>({});
-  const [showHidden, setShowHidden] = useState(false);
+  // 非表示にした写真はすぐ一覧から外す。次に読み込んだときはサーバーが除いて返す
+  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<string>>(new Set());
   const [sharing, setSharing] = useState(startSharing);
   const [renaming, setRenaming] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
@@ -89,36 +90,30 @@ export default function AlbumPage({
   const [moving, setMoving] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
-  const all = useMemo(
+  const shown = useMemo(
     () =>
-      photos.map((photo) => ({
-        ...photo,
-        favorite: favorites[photo.id] ?? photo.favorite,
-        hidden: hiddenIds[photo.id] ?? photo.hidden,
-      })),
+      photos
+        .filter((photo) => !hiddenIds.has(photo.id))
+        .map((photo) => ({ ...photo, favorite: favorites[photo.id] ?? photo.favorite })),
     [photos, favorites, hiddenIds],
   );
-  const hiddenCount = all.filter((photo) => photo.hidden).length;
-  const shown = useMemo(() => (showHidden ? all : all.filter((photo) => !photo.hidden)), [all, showHidden]);
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return shown.filter(
-        (photo) =>
-          !needle ||
-          photo.fileName.toLowerCase().includes(needle) ||
-          photo.camera?.toLowerCase().includes(needle),
-      );
-  }, [shown, query]);
+    return photoFilter.apply(shown).filter(
+      (photo) =>
+        !needle ||
+        photo.fileName.toLowerCase().includes(needle) ||
+        photo.camera?.toLowerCase().includes(needle),
+    );
+  }, [shown, query, photoFilter.filter]);
 
-  // 検索や非表示の切り替えで見えなくなった写真は、選択していても操作しない
+  // 検索で見えなくなった写真は、選択していても操作しない
   const selected = visible.filter((photo) => selectedIds.has(photo.id));
-  const selectedAllHidden = selected.length > 0 && selected.every((photo) => photo.hidden);
 
   const openIndex = visible.findIndex((photo) => photo.id === openId);
   const summary = [`${formatCount(shown.length)} 枚`];
   if (shown.length) summary.push(formatDateRange(shown[0].takenAt, shown[shown.length - 1].takenAt));
-  if (hiddenCount && !showHidden) summary.push(`非表示 ${formatCount(hiddenCount)} 枚`);
 
   async function toggleFavorite(photo: Photo) {
     const favorite = !photo.favorite;
@@ -131,20 +126,25 @@ export default function AlbumPage({
     if (!response.ok) setFavorites((current) => ({ ...current, [photo.id]: photo.favorite }));
   }
 
-  async function toggleHidden(photo: Photo) {
-    const hidden = !photo.hidden;
-    // 非表示の写真を出していないときは一覧から消えるので、拡大表示を隣の写真に移す
-    if (hidden && !showHidden && photo.id === openId) {
+  async function hide(photo: Photo) {
+    // 一覧から消えるので、拡大表示を隣の写真に移す
+    if (photo.id === openId) {
       const next = visible[openIndex + 1] ?? visible[openIndex - 1];
       setOpenId(next?.id ?? null);
     }
-    setHiddenIds((current) => ({ ...current, [photo.id]: hidden }));
+    setHiddenIds((current) => new Set(current).add(photo.id));
     const response = await window.fetch(`/api/photos/${photo.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ hidden }),
+      body: JSON.stringify({ hidden: true }),
     });
-    if (!response.ok) setHiddenIds((current) => ({ ...current, [photo.id]: photo.hidden }));
+    if (!response.ok) {
+      setHiddenIds((current) => {
+        const next = new Set(current);
+        next.delete(photo.id);
+        return next;
+      });
+    }
   }
 
   function select(list: Photo[], on: boolean) {
@@ -165,7 +165,7 @@ export default function AlbumPage({
     setBulkError(null);
   }
 
-  async function runBulk(body: { action: "hide" | "show" | "delete" } | { action: "move"; targetAlbumId: string }) {
+  async function runBulk(body: { action: "hide" | "delete" } | { action: "move"; targetAlbumId: string }) {
     const response = await window.fetch(`/api/albums/${album.id}/bulk`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -178,7 +178,7 @@ export default function AlbumPage({
     await router.refresh({ preserveScroll: true });
     // 拡大表示で切り替えた分が新しいデータより優先されないよう、手元の上書きを捨てる
     setFavorites({});
-    setHiddenIds({});
+    setHiddenIds(new Set());
     stopSelecting();
   }
 
@@ -193,14 +193,8 @@ export default function AlbumPage({
 
   const selectionActions: SelectionAction[] = [
     { label: "保存", icon: DownloadIcon, onClick: () => void downloader.download(selected) },
-    ...(isOwner
-      ? [
-          selectedAllHidden
-            ? { label: "表示", icon: EyeIcon, onClick: () => void bulk({ action: "show" }) }
-            : { label: "非表示", icon: EyeOffIcon, onClick: () => void bulk({ action: "hide" }) },
-          { label: "移動", icon: FolderInputIcon, onClick: () => setMoving(true) },
-        ]
-      : []),
+    { label: "非表示", icon: EyeOffIcon, onClick: () => void bulk({ action: "hide" }) },
+    ...(isOwner ? [{ label: "移動", icon: FolderInputIcon, onClick: () => setMoving(true) }] : []),
     ...(role !== "viewer"
       ? [
           {
@@ -246,12 +240,6 @@ export default function AlbumPage({
         <PencilIcon />
         名前を変更
       </DropdownMenuItem>
-      {(hiddenCount > 0 || showHidden) && (
-        <DropdownMenuItem onSelect={() => setShowHidden(!showHidden)}>
-          {showHidden ? <EyeOffIcon /> : <EyeIcon />}
-          {showHidden ? "非表示の写真を隠す" : `非表示の写真を表示 (${hiddenCount})`}
-        </DropdownMenuItem>
-      )}
       <DropdownMenuItem variant="destructive" onSelect={() => setPendingDelete({ kind: "album" })}>
         <Trash2Icon />
         アルバムを削除
@@ -267,6 +255,7 @@ export default function AlbumPage({
         </Link>
         <span className="truncate text-base font-semibold">{album.title}</span>
         <div className="flex flex-none">
+          {shown.length > 0 && <PhotoFilterButton filter={photoFilter.filter} onChange={photoFilter.setFilter} />}
           {photos.length > 0 && (
             <button
               type="button"
@@ -312,6 +301,11 @@ export default function AlbumPage({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
+        <PhotoFilterButton
+          filter={photoFilter.filter}
+          onChange={photoFilter.setFilter}
+          className="border border-border bg-card"
+        />
         <AccountLink user={user} />
       </AppHeader>
 
@@ -338,16 +332,16 @@ export default function AlbumPage({
                     onClick={() => setSharing(true)}
                     className="flex items-center enabled:cursor-pointer max-md:h-9 max-md:px-1"
                   >
-                    {avatars.slice(0, 3).map((initial, index) => (
+                    {avatars.slice(0, 3).map((avatar, index) => (
                       <span
                         key={index}
                         className={cn(
-                          "flex size-[26px] items-center justify-center rounded-full border-2 border-background text-[11px] font-semibold text-foreground max-md:size-6 max-md:text-[10px]",
+                          "flex size-[26px] items-center justify-center overflow-hidden rounded-full border-2 border-background text-[11px] font-semibold text-foreground max-md:size-6 max-md:text-[10px]",
                           AVATAR_COLORS[index],
                           index > 0 && "-ml-2",
                         )}
                       >
-                        {initial}
+                        {avatar.image ? <img src={avatar.image} alt="" className="size-full object-cover" /> : avatar.initial}
                       </span>
                     ))}
                     <span className="ml-2 max-md:ml-1.5">{sharedStatus}</span>
@@ -410,21 +404,13 @@ export default function AlbumPage({
           </div>
         </div>
 
-        {photos.length === 0 ? (
+        {shown.length === 0 ? (
           <p className="py-16 text-center text-sm text-muted-foreground max-md:px-4">
             {canAdd ? "まだ写真がありません。「写真を追加」から追加してください。" : "まだ写真がありません。"}
           </p>
-        ) : shown.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-16 text-center text-sm text-muted-foreground max-md:px-4">
-            <p>すべての写真を非表示にしています。</p>
-            <Button variant="surface" size="pill" onClick={() => setShowHidden(true)}>
-              <EyeIcon />
-              非表示の写真を表示
-            </Button>
-          </div>
         ) : visible.length === 0 ? (
           <p className="py-16 text-center text-sm text-muted-foreground max-md:px-4">
-            「{query}」に一致する写真はありません
+            {query ? `「${query}」に一致する写真はありません` : "条件に一致する写真はありません"}
           </p>
         ) : (
           <PhotoGrid
@@ -454,8 +440,8 @@ export default function AlbumPage({
           paused={pendingDelete !== null}
           onIndexChange={(index) => setOpenId(visible[index].id)}
           onClose={() => setOpenId(null)}
-          onToggleFavorite={isOwner ? toggleFavorite : undefined}
-          onToggleHidden={isOwner ? toggleHidden : undefined}
+          onToggleFavorite={toggleFavorite}
+          onToggleHidden={hide}
           onDelete={(photo) => setPendingDelete({ kind: "photo", photo })}
         />
       )}
@@ -506,7 +492,7 @@ export default function AlbumPage({
             </AlertDialogTitle>
             <AlertDialogDescription>
               {pendingDelete?.kind === "album"
-                ? `「${album.title}」と中の写真 ${photos.length} 枚を完全に削除します。元に戻せません。`
+                ? `「${album.title}」と中の写真を、非表示のものも含めてすべて完全に削除します。元に戻せません。`
                 : "元の画像も完全に削除します。元に戻せません。"}
             </AlertDialogDescription>
           </AlertDialogHeader>

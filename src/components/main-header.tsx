@@ -1,6 +1,6 @@
 import { useRouter } from "@void/react";
 import { UploadIcon } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 import { AccountLink, type AccountUser } from "@/components/account-link";
 import { AppHeader, HeaderSearch, type MainNavPage, MainNav } from "@/components/app-header";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,14 @@ export function MainHeader({
   current,
   initialQuery = "",
   onUpload,
+  filter,
 }: {
   user: AccountUser;
   current?: MainNavPage;
   initialQuery?: string;
   onUpload: () => void;
+  // 写真の一覧があるページでだけ、検索の横に絞り込みを出す
+  filter?: ReactNode;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
@@ -37,6 +40,7 @@ export function MainHeader({
           onChange={(event) => setQuery(event.target.value)}
         />
       </form>
+      {filter}
       <div className="flex items-center gap-2.5">
         <Button size="pill" className="font-semibold" onClick={onUpload}>
           <UploadIcon />

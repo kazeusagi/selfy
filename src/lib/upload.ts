@@ -147,3 +147,32 @@ export async function uploadPhoto(albumId: string, file: File, keepOriginal: boo
   if (!response.ok) throw new Error(`アップロードに失敗しました（${response.status}）`);
   return true;
 }
+
+const AVATAR_SIZE = 256;
+
+// アイコンは丸く切り抜いて出すので、中央を正方形に切り出してから縮める
+export async function uploadAvatar(file: File) {
+  const bitmap = await decode(file, originalType(file));
+  let blob: Blob;
+  try {
+    const edge = Math.min(bitmap.width, bitmap.height);
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = Math.min(AVATAR_SIZE, edge);
+    canvas
+      .getContext("2d")!
+      .drawImage(bitmap, (bitmap.width - edge) / 2, (bitmap.height - edge) / 2, edge, edge, 0, 0, canvas.width, canvas.height);
+    const toBlob = (type: string) => new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, QUALITY));
+    const webp = await toBlob("image/webp");
+    const result = webp?.type === "image/webp" ? webp : await toBlob("image/jpeg");
+    if (!result) throw new Error("画像を変換できませんでした");
+    blob = result;
+  } finally {
+    bitmap.close();
+  }
+  const form = new FormData();
+  form.set("avatar", blob);
+  const response = await window.fetch("/api/me/avatar", { method: "POST", body: form });
+  if (!response.ok) throw new Error("アイコンを保存できませんでした");
+  const { image } = (await response.json()) as { image: string };
+  return image;
+}

@@ -1,11 +1,12 @@
-import { albumMembers, albums, photos, shareLinks } from "@schema";
+import { albumMembers, albums, photoMarks, photos, shareLinks } from "@schema";
 import { defineHandler, defineHead } from "void";
 import type { InferProps } from "void";
 import { getUser } from "void/auth";
 import { and, db, eq, lte, sql } from "void/db";
-import { accessibleAlbums, isLinkActive, listWritableAlbums } from "@/server/access";
+import { accessibleAlbums, isHiddenBy, isLinkActive, isShown, listWritableAlbums, myMarks } from "@/server/access";
+import { hasHiddenPassword } from "@/server/hidden-password";
 import { getUserSettings } from "@/server/settings";
-import { displayName, findUsersByIds } from "@/server/users";
+import { accountOf, displayName, findUsersByIds } from "@/server/users";
 
 export type Props = Exclude<InferProps<typeof loader>, Response>;
 
@@ -22,12 +23,14 @@ export const loader = defineHandler(async (c) => {
       title: albums.title,
       createdAt: albums.createdAt,
       // 非表示の写真は枚数や日付に数えないが、保存容量には含める
-      count: sql<number>`count(case when not ${photos.hidden} then ${photos.id} end)`,
+      count: sql<number>`count(case when ${isShown} then ${photos.id} end)`,
+      hiddenCount: sql<number>`count(case when ${isHiddenBy(user.id)} then ${photos.id} end)`,
       bytes: sql<number>`coalesce(sum(${photos.storedBytes}), 0)`,
-      lastTakenAt: sql<string | null>`max(case when not ${photos.hidden} then ${photos.takenAt} end)`,
+      lastTakenAt: sql<string | null>`max(case when ${isShown} then ${photos.takenAt} end)`,
     })
     .from(albums)
     .leftJoin(photos, eq(photos.albumId, albums.id))
+    .leftJoin(photoMarks, myMarks(user.id))
     .where(visible)
     .groupBy(albums.id);
   const owned = summaries.filter((album) => album.ownerId === user.id);
@@ -37,17 +40,18 @@ export const loader = defineHandler(async (c) => {
     .select({
       id: photos.id,
       albumId: photos.albumId,
-      rank: sql<number>`row_number() over (partition by ${photos.albumId} order by ${photos.favorite} desc, ${photos.takenAt})`.as(
+      rank: sql<number>`row_number() over (partition by ${photos.albumId} order by coalesce(${photoMarks.favorite}, 0) desc, ${photos.takenAt})`.as(
         "rank",
       ),
     })
     .from(photos)
     .innerJoin(albums, eq(albums.id, photos.albumId))
-    .where(and(visible, eq(photos.hidden, false)))
+    .leftJoin(photoMarks, myMarks(user.id))
+    .where(and(visible, isShown))
     .as("ranked");
   const covers = await db.select().from(ranked).where(lte(ranked.rank, 3)).orderBy(sql`${ranked.rank}`);
 
-  const [links, members, otherOwners, albumOptions, settings] = await Promise.all([
+  const [links, members, otherOwners, albumOptions, settings, hasPassword] = await Promise.all([
     db
       .select({ albumId: shareLinks.albumId, expiresAt: shareLinks.expiresAt })
       .from(shareLinks)
@@ -61,6 +65,7 @@ export const loader = defineHandler(async (c) => {
     findUsersByIds([...new Set(summaries.map((album) => album.ownerId))].filter((id) => id !== user.id)),
     listWritableAlbums(user),
     getUserSettings(user.id),
+    hasHiddenPassword(user.id),
   ]);
   const linkedIds = new Set(links.filter(isLinkActive).map((link) => link.albumId));
   const ownerNames = new Map(otherOwners.map((owner) => [owner.id, displayName(owner)]));
@@ -80,9 +85,8 @@ export const loader = defineHandler(async (c) => {
       .selectDistinct({ albumId: photos.albumId })
       .from(photos)
       .innerJoin(albums, eq(albums.id, photos.albumId))
-      .where(
-        and(visible, eq(photos.hidden, false), sql`(${contains(photos.fileName)} or ${contains(photos.camera)})`),
-      );
+      .leftJoin(photoMarks, myMarks(user.id))
+      .where(and(visible, isShown, sql`(${contains(photos.fileName)} or ${contains(photos.camera)})`));
     matchedIds = new Set(hits.map((hit) => hit.albumId));
     for (const album of summaries) {
       if (album.title.toLowerCase().includes(q.toLowerCase())) matchedIds.add(album.id);
@@ -106,10 +110,12 @@ export const loader = defineHandler(async (c) => {
     }));
 
   return {
-    user: { name: user.name, email: user.email },
+    user: accountOf(user),
     q,
     pickingShare: c.req.query("share") !== undefined,
     albums: list,
+    // 中身は見せず、あることだけ伝える。パスワードを決めた人には0枚でも入口を残す
+    showHiddenAlbum: hasPassword || summaries.some((album) => album.hiddenCount > 0),
     albumOptions,
     ownedAlbums: owned.map((album) => ({ id: album.id, title: album.title })),
     settings,

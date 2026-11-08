@@ -5,7 +5,7 @@ import { db, eq } from "void/db";
 import { storage } from "void/storage";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
-import { canDeletePhoto, findAlbumAccess, requirePhoto } from "@/server/access";
+import { canDeletePhoto, findAlbumAccess, requirePhoto, setMarks } from "@/server/access";
 
 const body = z
   .object({ favorite: z.boolean().optional(), hidden: z.boolean().optional() })
@@ -15,9 +15,18 @@ export const PATCH = defineHandler.withValidator({ body })(async (c, { body }) =
   const user = requireAuth(c);
   const photo = await requirePhoto(c.req.param("id")!);
   const access = await findAlbumAccess(photo.albumId, user);
-  // お気に入りと非表示は写真に1つだけなので、アルバムのオーナーのものとして扱う
-  if (access?.role !== "owner") throw new HTTPException(404, { message: "写真が見つかりません" });
-  await db.update(photos).set(body).where(eq(photos.id, photo.id));
+  // オーナーが非表示にした写真は、ほかの人には存在しないものとして扱う
+  if (!access || (photo.hidden && access.role !== "owner")) {
+    throw new HTTPException(404, { message: "写真が見つかりません" });
+  }
+  const { favorite, hidden } = body;
+  // オーナーの非表示は招待した人や共有リンクからも隠す。ほかの人の非表示は自分にだけ効く
+  if (hidden !== undefined && access.role === "owner") {
+    await db.update(photos).set({ hidden }).where(eq(photos.id, photo.id));
+    if (favorite !== undefined) await setMarks(user.id, [photo.id], { favorite });
+  } else {
+    await setMarks(user.id, [photo.id], { favorite, hidden });
+  }
   return { ok: true };
 });
 

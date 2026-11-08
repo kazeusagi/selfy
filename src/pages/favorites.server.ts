@@ -1,11 +1,11 @@
-import { albums, photos } from "@schema";
+import { albums, photoMarks, photos } from "@schema";
 import { defineHandler, defineHead } from "void";
 import type { InferProps } from "void";
 import { getUser } from "void/auth";
 import { and, db, desc, eq } from "void/db";
-import { listWritableAlbums } from "@/server/access";
+import { accessibleAlbums, isShown, listWritableAlbums, myMarks } from "@/server/access";
 import { getUserSettings } from "@/server/settings";
-import { addAddedBy } from "@/server/users";
+import { accountOf, addAddedBy } from "@/server/users";
 
 export type Props = Exclude<InferProps<typeof loader>, Response>;
 
@@ -29,19 +29,20 @@ export const loader = defineHandler(async (c) => {
         longitude: photos.longitude,
         camera: photos.camera,
         exposure: photos.exposure,
-        favorite: photos.favorite,
       })
       .from(photos)
       .innerJoin(albums, eq(albums.id, photos.albumId))
-      .where(and(eq(albums.ownerId, user.id), eq(photos.favorite, true), eq(photos.hidden, false)))
+      // お気に入りは人ごとなので、招待されたアルバムの写真も含める
+      .innerJoin(photoMarks, myMarks(user.id))
+      .where(and(accessibleAlbums(user), eq(photoMarks.favorite, true), isShown))
       .orderBy(desc(photos.takenAt), desc(photos.createdAt)),
     listWritableAlbums(user),
     getUserSettings(user.id),
   ]);
 
   return {
-    user: { name: user.name, email: user.email },
-    photos: await addAddedBy(rows, user.id),
+    user: accountOf(user),
+    photos: (await addAddedBy(rows, user.id)).map((photo) => ({ ...photo, favorite: true })),
     albumOptions,
     settings,
   };

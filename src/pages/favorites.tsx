@@ -5,6 +5,7 @@ import { UploadDialog } from "@/components/album-dialogs";
 import { BottomNav } from "@/components/bottom-nav";
 import { Lightbox } from "@/components/lightbox";
 import { MainHeader } from "@/components/main-header";
+import { PhotoFilterButton, usePhotoFilter } from "@/components/photo-filter";
 import { Button } from "@/components/ui/button";
 import { useDragSelect } from "@/hooks/use-drag-select";
 import { MOBILE_COLUMNS_CLASS, useGridColumns } from "@/hooks/use-grid-columns";
@@ -110,8 +111,10 @@ export default function FavoritesPage({ user, photos, albumOptions, settings }: 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
   const grid = useGridColumns<HTMLDivElement>();
+  const photoFilter = usePhotoFilter();
 
-  const visible = useMemo(() => photos.filter((photo) => overrides[photo.id] ?? true), [photos, overrides]);
+  const kept = useMemo(() => photos.filter((photo) => overrides[photo.id] ?? true), [photos, overrides]);
+  const visible = useMemo(() => photoFilter.apply(kept), [kept, photoFilter.filter]);
   const groups = useMemo(() => groupPhotos(visible, sort), [visible, sort]);
   const ordered = groups.flatMap((group) => group.photos);
   const albumCount = new Set(visible.map((photo) => photo.albumId)).size;
@@ -168,7 +171,18 @@ export default function FavoritesPage({ user, photos, albumOptions, settings }: 
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <MainHeader user={user} current="favorites" onUpload={() => setUploading(true)} />
+      <MainHeader
+        user={user}
+        current="favorites"
+        onUpload={() => setUploading(true)}
+        filter={
+          <PhotoFilterButton
+            filter={photoFilter.filter}
+            onChange={photoFilter.setFilter}
+            className="border border-border bg-card"
+          />
+        }
+      />
       <main className="mx-auto flex max-w-[1280px] flex-col gap-5 px-8 pt-10 pb-16 max-md:gap-3.5 max-md:px-0 max-md:pt-5 max-md:pb-[120px]">
         <div className="flex items-end justify-between max-md:px-4">
           <div className="flex flex-col gap-1">
@@ -177,16 +191,19 @@ export default function FavoritesPage({ user, photos, albumOptions, settings }: 
               {formatCount(visible.length)} 枚 · {albumCount} アルバムから
             </span>
           </div>
-          {visible.length > 0 && (
-            <Button
-              variant="outline"
-              aria-pressed={selecting}
-              className="h-9 rounded-full border-input bg-transparent px-3.5 font-semibold dark:bg-transparent"
-              onClick={() => (selecting ? stopSelecting() : setSelecting(true))}
-            >
-              {selecting ? "キャンセル" : "選択"}
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            <PhotoFilterButton filter={photoFilter.filter} onChange={photoFilter.setFilter} className="md:hidden" />
+            {visible.length > 0 && (
+              <Button
+                variant="outline"
+                aria-pressed={selecting}
+                className="h-9 rounded-full border-input bg-transparent px-3.5 font-semibold dark:bg-transparent"
+                onClick={() => (selecting ? stopSelecting() : setSelecting(true))}
+              >
+                {selecting ? "キャンセル" : "選択"}
+              </Button>
+            )}
+          </div>
         </div>
         <div role="tablist" aria-label="並び替え" className="flex gap-2 max-md:px-4">
           {SORTS.map((item) => (
@@ -210,7 +227,7 @@ export default function FavoritesPage({ user, photos, albumOptions, settings }: 
         <div ref={grid.ref} style={grid.style} className="flex flex-col gap-5 max-md:touch-pan-y max-md:gap-3.5">
           {visible.length === 0 ? (
             <p className="py-16 text-center text-sm text-muted-foreground">
-              お気に入りの写真はまだありません
+              {kept.length ? "条件に一致する写真はありません" : "お気に入りの写真はまだありません"}
             </p>
           ) : (
             groups.map((group) => (
