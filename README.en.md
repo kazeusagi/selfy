@@ -106,17 +106,9 @@ bun install
 
 ### 2. Replace the author's settings
 
-The repository contains settings for the author's own deployment. Change these three things so you don't deploy against them.
+The repository contains settings for the author's own deployment. Change these two things so you don't deploy against them.
 
-1. **Delete `void.lock.json`.**
-   It records the author's Cloudflare account ID and D1 and R2 resource IDs.
-   Once it is gone, the first deploy creates the resources in your account and writes a new file.
-
-   ```sh
-   rm void.lock.json
-   ```
-
-2. **Change the domain in `void.config.ts`.**
+1. **Change the domain in `void.config.ts`.**
    Replace `selfy.kazeusagi.dev` in `routes` with your own domain (one managed by Cloudflare).
 
    ```ts
@@ -125,7 +117,7 @@ The repository contains settings for the author's own deployment. Change these t
 
    To serve the app on `*.workers.dev` instead of a custom domain, remove `routes` and set `"workers_dev": true`.
 
-3. **Change the sender address in `src/server/login-email.ts`.**
+2. **Change the sender address in `src/server/login-email.ts`.**
    Set `FROM` to an address on the domain you verified with Resend.
 
    ```ts
@@ -161,7 +153,8 @@ bunx void deploy --platform cloudflare
 ```
 
 This creates D1 and R2, builds the app, applies migrations and uploads the Worker in one go.
-When it finishes, commit the generated `void.lock.json`. Other machines and CI need it to deploy.
+The IDs of the created resources are recorded in `void.lock.json`. It differs per deployment, so it is listed in `.gitignore`.
+Keep the file safe: if it is lost, the next deploy creates new resources.
 
 ### 6. Start using it
 
@@ -175,6 +168,7 @@ When it finishes, commit the generated `void.lock.json`. Other machines and CI n
 `.github/workflows/void-deploy.yml` contains a workflow that deploys on push.
 It is currently disabled by pointing it at a branch that doesn't exist. To use it, change `branches` to the branch you want to deploy from.
 
+`void.lock.json` is not in the repository, so to deploy from CI, remove it from `.gitignore` in your fork and commit it.
 You also need to add a `CLOUDFLARE_API_TOKEN` repository secret: a token with Workers Scripts edit permission and access to D1 and R2.
 See the [Void documentation](https://void.cloud) for details.
 

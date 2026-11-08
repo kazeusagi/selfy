@@ -106,17 +106,9 @@ bun install
 
 ### 2. 作者の環境に向いている設定を書き換える
 
-このリポジトリには作者の環境向けの設定が含まれています。そのままデプロイしないよう、次の 3 か所を変更してください。
+このリポジトリには作者の環境向けの設定が含まれています。そのままデプロイしないよう、次の 2 か所を変更してください。
 
-1. **`void.lock.json` を削除する。**
-   作者の Cloudflare アカウント ID や D1・R2 のリソース ID が記録されています。
-   削除しておくと、初回デプロイ時にあなたのアカウントにリソースが作られ、新しいファイルが生成されます。
-
-   ```sh
-   rm void.lock.json
-   ```
-
-2. **`void.config.ts` のドメインを変更する。**
+1. **`void.config.ts` のドメインを変更する。**
    `routes` の `selfy.kazeusagi.dev` を、自分のドメイン (Cloudflare で管理しているもの) に書き換えます。
 
    ```ts
@@ -125,7 +117,7 @@ bun install
 
    独自ドメインを使わず `*.workers.dev` で公開する場合は、`routes` を消して `"workers_dev": true` にします。
 
-3. **`src/server/login-email.ts` の送信元アドレスを変更する。**
+2. **`src/server/login-email.ts` の送信元アドレスを変更する。**
    `FROM` を Resend で認証したドメインのアドレスに書き換えます。
 
    ```ts
@@ -161,7 +153,8 @@ bunx void deploy --platform cloudflare
 ```
 
 D1・R2 の作成、ビルド、マイグレーションの適用、Worker のアップロードまでまとめて行われます。
-完了したら、生成された `void.lock.json` をコミットしておきましょう (他のマシンや CI からデプロイするときに必要です)。
+作成したリソースの ID は `void.lock.json` に記録されます。このファイルは環境ごとに異なるため `.gitignore` に入れてあります。
+消してしまうと次のデプロイでリソースが新しく作られてしまうので、手元で大切に保管してください。
 
 ### 6. 使い始める
 
@@ -175,7 +168,8 @@ D1・R2 の作成、ビルド、マイグレーションの適用、Worker の�
 `.github/workflows/void-deploy.yml` に、push 時にデプロイするワークフローが入っています。
 現在はデプロイ対象のブランチを存在しない名前にして無効にしてあるので、使う場合は `branches` をデプロイしたいブランチに変更してください。
 
-リポジトリの Secrets に `CLOUDFLARE_API_TOKEN` (Workers Scripts の編集権限と、D1・R2 へのアクセス権を持つトークン) を登録する必要があります。
+`void.lock.json` はリポジトリに含まれないため、CI から使う場合は自分のフォークで `.gitignore` から外してコミットしてください。
+また、リポジトリの Secrets に `CLOUDFLARE_API_TOKEN` (Workers Scripts の編集権限と、D1・R2 へのアクセス権を持つトークン) を登録する必要があります。
 詳しくは [Void のドキュメント](https://void.cloud) を参照してください。
 
 ## ライセンス

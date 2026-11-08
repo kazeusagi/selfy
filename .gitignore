@@ -41,3 +41,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Windows metadata
 *:Zone.Identifier
+
+# Void のリソース ID (環境ごとに異なる)
+void.lock.json
