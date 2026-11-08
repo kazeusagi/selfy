@@ -11,7 +11,7 @@ import {
   Trash2Icon,
   UploadIcon,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlbumTitleDialog, MovePhotosDialog } from "@/components/album-dialogs";
 import { AccountLink } from "@/components/account-link";
 import { AppHeader, HeaderSearch, MainNav } from "@/components/app-header";
@@ -22,7 +22,7 @@ import { PhotoFilterButton, usePhotoFilter } from "@/components/photo-filter";
 import { PhotoGrid } from "@/components/photo-grid";
 import { type SelectionAction, SelectionBar } from "@/components/selection-bar";
 import { ShareDialog } from "@/components/share-dialog";
-import { IMAGE_ACCEPT, openPhotoPicker, UploadStatus } from "@/components/upload-status";
+import { IMAGE_ACCEPT, openPhotoPicker } from "@/components/upload-status";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,7 +66,7 @@ export default function AlbumPage({
   settings,
 }: Props) {
   const router = useRouter();
-  const uploader = useUploader(settings);
+  const uploader = useUploader();
   const downloader = usePhotoDownload(album.title);
   const isOwner = role === "owner";
   const sharedStatus =
@@ -208,10 +208,17 @@ export default function AlbumPage({
       : []),
   ];
 
-  async function addFiles(files: File[]) {
-    if (!files.length) return;
-    await uploader.upload(album.id, files);
-    await router.refresh({ preserveScroll: true });
+  // 別の画面に移って戻ってきた場合も、このアルバムへの追加が終わったら一覧を読み直す
+  const wasUploading = useRef(false);
+  useEffect(() => {
+    if (wasUploading.current && !uploader.running && uploader.albumId === album.id) {
+      void router.refresh({ preserveScroll: true });
+    }
+    wasUploading.current = uploader.running;
+  }, [uploader.running]);
+
+  function addFiles(files: File[]) {
+    if (files.length) void uploader.upload(album.id, files, settings);
   }
 
   async function confirmDelete() {
@@ -386,7 +393,7 @@ export default function AlbumPage({
                 accept={IMAGE_ACCEPT}
                 hidden
                 onChange={(event) => {
-                  void addFiles([...(event.target.files ?? [])]);
+                  addFiles([...(event.target.files ?? [])]);
                   event.target.value = "";
                 }}
               />
@@ -533,7 +540,6 @@ export default function AlbumPage({
         />
       )}
 
-      <UploadStatus {...uploader} onDismiss={uploader.dismiss} />
     </div>
   );
 }
