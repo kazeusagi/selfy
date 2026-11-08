@@ -523,7 +523,7 @@ export function Share() {
   const { fps } = useVideoConfig();
   const on = spring({ frame: frame - 112, fps, config: { damping: 20 } });
   const linked = frame >= 112;
-  const url = typed('https://selfy.kazeusagi.dev/s/sXS1kRk1BnSQza7O3KjJvw', frame, 120, 1);
+  const url = typed('https://photos.example.com/s/sXS1kRk1BnSQza7O3KjJvw', frame, 120, 1);
   const copied = frame >= 182;
   const highlight = interpolate(frame, [50, 58, 100, 108], [0, 1, 1, 0], clamp);
   return (
