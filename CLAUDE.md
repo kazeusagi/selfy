@@ -55,7 +55,10 @@ SELFY_DOMAIN=<domain> bunx void deploy --platform cloudflare
 
 - 役割は `owner` / `contributor` / `viewer` の3つです。メンバーは未登録の人も招待できるよう、ユーザー ID ではなくメールアドレス (小文字) で `album_members` に持ちます。
 - アルバムに触る処理は `findAlbumAccess` / `requireOwnedAlbum` / `accessibleAlbums` を通して権限を確認します。contributor が削除できるのは、自分が追加した写真だけです (`canDeletePhoto`)。
-- `photos.hidden` の写真はオーナーにしか見せません。枚数や日付にも数えませんが、保存容量には含めます。
+- お気に入りと、オーナー以外の人の非表示は人ごとなので `photo_marks` (ユーザー × 写真) に持ちます。閲覧のみの人もお気に入りと非表示ができます。
+- オーナーが非表示にした写真は `photos.hidden` に入り、招待された人や共有リンクからも隠します。オーナー以外の人の非表示は `photo_marks.hidden` で、その人にだけ効きます。どちらも枚数や日付には数えませんが、保存容量には含めます。条件は `isShown` / `isHiddenBy` (`src/server/access.ts`) を使います。
+- 自分が非表示にした写真は、アルバム一覧の「非表示」(`/hidden`) にまとまります。ログインとは別のパスワード (`user_settings.hidden_password`、PBKDF2) を入れると、`POST /api/hidden` が一覧を返します。ページを開き直すたびに入れ直す作りで、Cookie には残しません。
+- ユーザーのアイコンは R2 の `avatars/<userId>` に置き、Better Auth の `user.image` に `/api/users/<id>/avatar?v=...` を入れます。`image` は本人が自由に書き換えられるので、表示には `avatarOf` で自前の URL だけを通します。
 - 共有リンク (`share_links`、ページは `/s/[token]`) はログインなしで見られます。画像の取得には `?share=<token>` を付けます。
 
 ### 写真のアップロードと配信

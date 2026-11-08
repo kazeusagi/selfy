@@ -1,12 +1,12 @@
-import { albumMembers, albums, photos, shareLinks } from "@schema";
+import { albumMembers, albums, photoMarks, photos, shareLinks } from "@schema";
 import { defineHandler, defineHead } from "void";
 import type { InferProps } from "void";
 import { getUser } from "void/auth";
 import { and, asc, db, eq, ne } from "void/db";
-import { canAddPhotos, canDeletePhoto, findAlbumAccess, isLinkActive } from "@/server/access";
+import { canAddPhotos, canDeletePhoto, findAlbumAccess, isFavorite, isLinkActive, isShown, myMarks } from "@/server/access";
 import { listAllowedUsers } from "@/server/allowed-emails";
 import { getUserSettings } from "@/server/settings";
-import { addAddedBy, findUsersByEmails, findUsersByIds, initialOf } from "@/server/users";
+import { accountOf, addAddedBy, avatarOf, findUsersByEmails, findUsersByIds, initialOf } from "@/server/users";
 
 export type Props = Exclude<InferProps<typeof loader>, Response>;
 
@@ -33,12 +33,12 @@ export const loader = defineHandler(async (c) => {
         longitude: photos.longitude,
         camera: photos.camera,
         exposure: photos.exposure,
-        favorite: photos.favorite,
-        hidden: photos.hidden,
+        favorite: isFavorite,
       })
       .from(photos)
-      // 非表示の写真はオーナーにだけ渡す
-      .where(and(eq(photos.albumId, album.id), isOwner ? undefined : eq(photos.hidden, false)))
+      .leftJoin(photoMarks, myMarks(user.id))
+      // 非表示の写真はパスワードを入れた「非表示」アルバムでだけ見せる
+      .where(and(eq(photos.albumId, album.id), isShown))
       .orderBy(asc(photos.takenAt), asc(photos.createdAt)),
     db
       .select({
@@ -68,29 +68,29 @@ export const loader = defineHandler(async (c) => {
 
   const [owner] = await findUsersByIds([album.ownerId]);
   const joined = await findUsersByEmails(memberRows.map((member) => member.email));
-  const names = new Map(joined.map((member) => [member.email, member.name]));
-  const members = memberRows.map((member) => ({
-    ...member,
-    name: names.get(member.email) ?? "",
-  }));
+  const accounts = new Map(joined.map((member) => [member.email, member]));
+  const members = memberRows.map((member) => {
+    const account = accounts.get(member.email);
+    return { ...member, name: account?.name ?? "", image: account ? avatarOf(account) : null };
+  });
   const memberEmails = new Set(memberRows.map((member) => member.email));
   const candidates = users.filter((other) => other.id !== user.id && !memberEmails.has(other.email));
 
   return {
-    user: { name: user.name, email: user.email },
+    user: accountOf(user),
     album: { id: album.id, title: album.title },
     role,
     canAdd: canAddPhotos(role),
     startSharing: isOwner && c.req.query("share") !== undefined,
-    photos: (await addAddedBy(rows.map((row) => ({ ...row, deletable: canDeletePhoto(role, row, user.id) })), user.id)).map(
-      // お気に入りはオーナーのものなので、招待された人には見せない
-      (photo) => (isOwner ? photo : { ...photo, favorite: false }),
-    ),
+    photos: await addAddedBy(rows.map((row) => ({ ...row, deletable: canDeletePhoto(role, row, user.id) })), user.id),
     // メールアドレスはオーナーにだけ渡す
     members: isOwner ? members : [],
     candidates,
     moveTargets,
-    avatars: [owner, ...members].map((member) => initialOf(member)),
+    avatars: [{ ...owner, image: avatarOf(owner) }, ...members].map((member) => ({
+      initial: initialOf(member),
+      image: member.image,
+    })),
     shareLink: isOwner && link ? { ...link, active: isLinkActive(link) } : null,
     settings,
   };

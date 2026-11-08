@@ -1,5 +1,5 @@
 import { sql } from "void/db";
-import { index, integer, real, sqliteTable, text, uniqueIndex } from "void/schema-d1";
+import { index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from "void/schema-d1";
 
 export const albums = sqliteTable(
   "albums",
@@ -37,7 +37,6 @@ export const photos = sqliteTable(
     longitude: real("longitude"),
     camera: text("camera"),
     exposure: text("exposure"),
-    favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
     // オーナーが一覧から外した写真。招待された人や共有リンクにも見せない
     hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
     createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
@@ -47,6 +46,21 @@ export const photos = sqliteTable(
     index("photos_owner_idx").on(t.ownerId),
     index("photos_album_hash_idx").on(t.albumId, t.contentHash),
   ],
+);
+
+// お気に入りと、オーナー以外の人の非表示は人によって違うので、写真とユーザーの組で持つ
+export const photoMarks = sqliteTable(
+  "photo_marks",
+  {
+    userId: text("user_id").notNull(),
+    photoId: text("photo_id")
+      .notNull()
+      .references(() => photos.id, { onDelete: "cascade" }),
+    favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
+    // 自分にだけ見えなくする。オーナーの非表示 (photos.hidden) と違って他の人には影響しない
+    hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.photoId] }), index("photo_marks_photo_idx").on(t.photoId)],
 );
 
 export const shareLinks = sqliteTable("share_links", {
@@ -90,4 +104,6 @@ export const userSettings = sqliteTable("user_settings", {
   stripGps: integer("strip_gps", { mode: "boolean" }).notNull().default(true),
   wifiOnly: integer("wifi_only", { mode: "boolean" }).notNull().default(false),
   defaultExpiry: text("default_expiry", { enum: ["7d", "30d", "never"] }).notNull().default("7d"),
+  // 非表示の写真を開くためのパスワード。ログインにはパスワードがないので別に持つ
+  hiddenPassword: text("hidden_password"),
 });

@@ -1,5 +1,5 @@
-import { albumMembers, albums, photos, shareLinks } from "@schema";
-import { and, db, eq, inArray, or } from "void/db";
+import { albumMembers, albums, photoMarks, photos, shareLinks } from "@schema";
+import { and, db, eq, inArray, or, sql } from "void/db";
 import { HTTPException } from "hono/http-exception";
 
 export type AlbumUser = { id: string; email: string };
@@ -83,4 +83,32 @@ export function isLinkActive(link: { expiresAt: number | null }) {
 export async function findActiveShareLink(token: string) {
   const [link] = await db.select().from(shareLinks).where(eq(shareLinks.token, token));
   return link && isLinkActive(link) ? link : undefined;
+}
+
+// photo_marks を自分の分だけ写真につなぐ。印がない写真も残すので left join で使う
+export function myMarks(userId: string) {
+  return and(eq(photoMarks.photoId, photos.id), eq(photoMarks.userId, userId))!;
+}
+
+export const isFavorite = sql<boolean>`coalesce(${photoMarks.favorite}, 0)`.mapWith(Boolean);
+
+// 誰にも非表示にされていない写真。オーナーの非表示は全員から、自分の非表示は自分からだけ隠す
+export const isShown = sql`(not ${photos.hidden} and not coalesce(${photoMarks.hidden}, 0))`;
+
+// 自分が非表示にした写真。オーナーの非表示は photos.hidden に入るので、albums もつないで使う
+export function isHiddenBy(userId: string) {
+  return sql`((${photos.hidden} and ${albums.ownerId} = ${userId}) or coalesce(${photoMarks.hidden}, 0))`;
+}
+
+// 印は1人1行なので、なければ作ってから書き換える
+export async function setMarks(userId: string, photoIds: string[], values: { favorite?: boolean; hidden?: boolean }) {
+  // 渡されなかった方は今の値を残す
+  const set = Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined));
+  // D1 は1つの文に渡せる値が100個までなので、1行4つとして分ける
+  for (let i = 0; i < photoIds.length; i += 20) {
+    await db
+      .insert(photoMarks)
+      .values(photoIds.slice(i, i + 20).map((photoId) => ({ userId, photoId, ...values })))
+      .onConflictDoUpdate({ target: [photoMarks.userId, photoMarks.photoId], set });
+  }
 }

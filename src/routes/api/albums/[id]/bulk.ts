@@ -5,7 +5,7 @@ import { and, db, eq, inArray } from "void/db";
 import { storage } from "void/storage";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
-import { canDeletePhoto, findAlbumAccess, requireOwnedAlbum } from "@/server/access";
+import { canDeletePhoto, findAlbumAccess, requireOwnedAlbum, setMarks } from "@/server/access";
 
 // D1 は1つの文に渡せる値が100個までなので、ID 以外の値の分を残して分ける
 const SQL_CHUNK = 90;
@@ -38,6 +38,7 @@ export const POST = defineHandler.withValidator({ body })(async (c, { body }) =>
           .select({
             id: photos.id,
             ownerId: photos.ownerId,
+            hidden: photos.hidden,
             originalKey: photos.originalKey,
             displayKey: photos.displayKey,
             thumbKey: photos.thumbKey,
@@ -48,22 +49,26 @@ export const POST = defineHandler.withValidator({ body })(async (c, { body }) =>
     )
   ).flat();
   // 一部だけ処理すると何が起きたか分からなくなるので、1枚でも見つからなければ全体を断る
-  if (rows.length !== ids.length) throw new HTTPException(404, { message: "写真が見つかりません" });
-
-  // 非表示と移動はお気に入りと同じくオーナーだけに許す
-  if (body.action !== "delete" && access.role !== "owner") {
-    throw new HTTPException(404, { message: "写真が見つかりません" });
-  }
+  // オーナーが非表示にした写真は、ほかの人には存在しないものとして扱う
+  const reachable = access.role === "owner" || rows.every((photo) => !photo.hidden);
+  if (rows.length !== ids.length || !reachable) throw new HTTPException(404, { message: "写真が見つかりません" });
 
   const inAlbum = (chunk: string[]) => and(eq(photos.albumId, albumId), inArray(photos.id, chunk));
 
   if (body.action === "hide" || body.action === "show") {
     const hidden = body.action === "hide";
-    for (const chunk of idChunks) await db.update(photos).set({ hidden }).where(inAlbum(chunk));
+    // オーナーの非表示は全員から隠し、ほかの人の非表示は自分にだけ効かせる
+    if (access.role === "owner") {
+      for (const chunk of idChunks) await db.update(photos).set({ hidden }).where(inAlbum(chunk));
+    } else {
+      await setMarks(user.id, ids, { hidden });
+    }
     return { ok: true, count: ids.length };
   }
 
   if (body.action === "move") {
+    // 移動は写真の置き場所を変えるので、オーナーだけに許す
+    if (access.role !== "owner") throw new HTTPException(404, { message: "写真が見つかりません" });
     // 移動先は自分のアルバムに限る。招待されたアルバムに入れると、他人の写真を消せなくなるうえ相手の容量を使う
     if (body.targetAlbumId === albumId) throw new HTTPException(400, { message: "同じアルバムには移動できません" });
     await requireOwnedAlbum(body.targetAlbumId, user.id);

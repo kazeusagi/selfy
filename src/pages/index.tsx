@@ -1,5 +1,5 @@
 import { Link, useRouter } from "@void/react";
-import { PlusIcon, SearchIcon, UsersIcon } from "lucide-react";
+import { LockIcon, PlusIcon, SearchIcon, UsersIcon } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { NewAlbumDialog, UploadDialog } from "@/components/album-dialogs";
 import { AccountLink } from "@/components/account-link";
@@ -70,11 +70,27 @@ function AlbumCard({ album }: { album: Props["albums"][number] }) {
   );
 }
 
+// 中身が分からないよう、写真ではなく色だけで見せる
+function HiddenAlbumCard() {
+  return (
+    <Link href="/hidden" className="flex min-w-0 flex-col gap-3 text-foreground hover:text-link-hover max-md:gap-2">
+      <div className="flex aspect-[4/3] items-center justify-center rounded-2xl bg-linear-135 from-[#3f3d56] via-[#6b5b95] to-[#c39bd3] max-md:aspect-square max-md:rounded-[14px]">
+        <LockIcon className="size-8 text-white/90" strokeWidth={1.8} />
+      </div>
+      <div className="flex flex-col gap-[3px] px-0.5 max-md:gap-0.5">
+        <span className="truncate text-base font-semibold max-md:text-[15px]">非表示</span>
+        <span className="text-[13px] text-muted-foreground">パスワードで保護</span>
+      </div>
+    </Link>
+  );
+}
+
 export default function AlbumsPage({
   user,
   q,
   pickingShare,
   albums,
+  showHiddenAlbum,
   albumOptions,
   ownedAlbums,
   settings,
@@ -158,6 +174,7 @@ export default function AlbumsPage({
           {visible.map((album) => (
             <AlbumCard key={album.id} album={album} />
           ))}
+          {showHiddenAlbum && !q && tab !== "shared" && <HiddenAlbumCard />}
           {tab === "shared" ? (
             visible.length === 0 && (
               <p className="col-span-full py-16 text-center text-sm text-muted-foreground">

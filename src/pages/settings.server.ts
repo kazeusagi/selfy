@@ -5,7 +5,9 @@ import { getSession } from "void/auth";
 import { db, eq, sql } from "void/db";
 import { isLinkActive, listWritableAlbums } from "@/server/access";
 import { isAdmin, listAllowedEmails } from "@/server/allowed-emails";
+import { hasHiddenPassword } from "@/server/hidden-password";
 import { getUserSettings } from "@/server/settings";
+import { accountOf } from "@/server/users";
 
 export type Props = Exclude<InferProps<typeof loader>, Response>;
 
@@ -14,7 +16,7 @@ export const loader = defineHandler(async (c) => {
   if (!auth) return c.redirect("/login");
   const { user, session } = auth;
 
-  const [storage, owned, links, invited, [passkeys], [sessions], albumOptions, settings, allowedEmails] =
+  const [storage, owned, links, invited, [passkeys], [sessions], albumOptions, settings, allowedEmails, hasPassword] =
     await Promise.all([
       db
         .select({
@@ -46,6 +48,7 @@ export const loader = defineHandler(async (c) => {
       listWritableAlbums(user),
       getUserSettings(user.id),
       isAdmin(user) ? listAllowedEmails() : null,
+      hasHiddenPassword(user.id),
     ]);
 
   const sharedIds = new Set([
@@ -54,7 +57,7 @@ export const loader = defineHandler(async (c) => {
   ]);
 
   return {
-    user: { name: user.name, email: user.email },
+    user: accountOf(user),
     sessionId: session.id,
     settings,
     storage: {
@@ -67,6 +70,7 @@ export const loader = defineHandler(async (c) => {
     albumOptions,
     // 管理者以外には null を返し、管理用の項目を出さない
     allowedEmails,
+    hasHiddenPassword: hasPassword,
   };
 });
 

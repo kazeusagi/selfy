@@ -1,7 +1,7 @@
 import { Link, useRouter } from "@void/react";
 import { ChevronDownIcon, Link2Icon } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
-import { type AccountUser, userInitial } from "@/components/account-link";
+import { type AccountUser, UserAvatar } from "@/components/account-link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -42,7 +42,7 @@ export type ShareLink = {
 
 export type MemberRole = "viewer" | "contributor";
 
-export type AlbumMember = { id: string; email: string; name: string; role: MemberRole };
+export type AlbumMember = { id: string; email: string; name: string; image: string | null; role: MemberRole };
 
 export type InviteCandidate = { id: string; email: string; name: string };
 
@@ -68,14 +68,7 @@ function MemberRow({
 }) {
   return (
     <div className="flex min-h-[52px] items-center gap-3">
-      <span
-        className={cn(
-          "flex size-9 flex-none items-center justify-center rounded-full text-[13px] font-semibold",
-          AVATAR_COLORS[index % AVATAR_COLORS.length],
-        )}
-      >
-        {userInitial(member)}
-      </span>
+      <UserAvatar user={member} className={cn("size-9 text-[13px]", AVATAR_COLORS[index % AVATAR_COLORS.length])} />
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-sm font-medium max-md:text-[15px]">{member.name || member.email}</span>
         {member.name && <span className="truncate text-xs text-muted-foreground">{member.email}</span>}
@@ -291,9 +284,7 @@ export function ShareDialog({
         <div className="flex flex-col gap-1 px-6 pt-5 pb-2 max-md:px-5 max-md:pt-[18px] max-md:pb-0">
           <h3 className="mb-1.5 text-[13px] font-semibold text-muted-foreground">メンバー</h3>
           <div className="flex min-h-[52px] items-center gap-3">
-            <span className="flex size-9 flex-none items-center justify-center rounded-full bg-avatar text-[13px] font-semibold">
-              {userInitial(user)}
-            </span>
+            <UserAvatar user={user} className="size-9 text-[13px]" />
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="text-sm font-medium max-md:text-[15px]">あなた</span>
               <span className="truncate text-xs text-muted-foreground">{user.email}</span>
