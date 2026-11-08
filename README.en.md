@@ -58,13 +58,11 @@ Photos are stored in R2 and data in D1.
    bun install
    ```
 
-2. Create a `.env` file in the repository root.
+2. Copy `.env.example` to `.env` and set `ADMIN_EMAIL` to your own email address.
+   In development, emails go to a local inbox, so the other values can stay as they are.
 
    ```sh
-   # In development, emails go to a local inbox, so a dummy value is fine
-   RESEND_API_KEY=dummy
-   # The admin's email address, the first account that can log in
-   ADMIN_EMAIL=you@example.com
+   cp .env.example .env
    ```
 
 3. Start the dev server. Database migrations are applied automatically on startup.
@@ -104,27 +102,7 @@ cd selfy
 bun install
 ```
 
-### 2. Replace the author's settings
-
-The repository contains settings for the author's own deployment. Change these two things so you don't deploy against them.
-
-1. **Change the domain in `void.config.ts`.**
-   Replace `selfy.kazeusagi.dev` in `routes` with your own domain (one managed by Cloudflare).
-
-   ```ts
-   "routes": [{ "pattern": "photos.example.com", "custom_domain": true }],
-   ```
-
-   To serve the app on `*.workers.dev` instead of a custom domain, remove `routes` and set `"workers_dev": true`.
-
-2. **Change the sender address in `src/server/login-email.ts`.**
-   Set `FROM` to an address on the domain you verified with Resend.
-
-   ```ts
-   const FROM = "Selfy <noreply@example.com>";
-   ```
-
-### 3. Log in to Cloudflare
+### 2. Log in to Cloudflare
 
 ```sh
 bunx void cloudflare login
@@ -132,13 +110,14 @@ bunx void cloudflare login
 
 A browser window opens. Choose the account to deploy to.
 
-### 4. Set the secrets
+### 3. Set the secrets
 
 Production values are never uploaded from `.env`. Set them with `void secret put`.
 
 ```sh
 bunx void secret put RESEND_API_KEY   # Your Resend API key
 bunx void secret put ADMIN_EMAIL      # The admin's email address
+bunx void secret put EMAIL_FROM       # The sender address, on the domain you verified with Resend
 ```
 
 You don't need to set `BETTER_AUTH_SECRET`. Void creates it for you.
@@ -146,17 +125,29 @@ You don't need to set `BETTER_AUTH_SECRET`. Void creates it for you.
 > [!NOTE]
 > If the secrets can't be set because the Worker doesn't exist yet, run `void deploy` once first, then set them and deploy again.
 
-### 5. Deploy
+### 4. Deploy
+
+Set the domain to serve the app on with the `SELFY_DOMAIN` environment variable. Use a domain managed by Cloudflare.
+
+```sh
+SELFY_DOMAIN=photos.example.com bunx void deploy --platform cloudflare
+```
+
+Without `SELFY_DOMAIN`, the app is served on a `*.workers.dev` subdomain instead of a custom domain.
 
 ```sh
 bunx void deploy --platform cloudflare
 ```
 
+> [!WARNING]
+> Pass `SELFY_DOMAIN` in the environment of the deploy command, not in `.env`.
+> If you deploy without it after using a custom domain, the custom domain is removed and the app moves to `*.workers.dev`.
+
 This creates D1 and R2, builds the app, applies migrations and uploads the Worker in one go.
 The IDs of the created resources are recorded in `void.lock.json`. It differs per deployment, so it is listed in `.gitignore`.
 Keep the file safe: if it is lost, the next deploy creates new resources.
 
-### 6. Start using it
+### 5. Start using it
 
 1. Open your domain and log in with the `ADMIN_EMAIL` address.
 2. To let other people in, add their email addresses to the allowlist on the **Settings** page.
@@ -169,6 +160,7 @@ Keep the file safe: if it is lost, the next deploy creates new resources.
 It is currently disabled by pointing it at a branch that doesn't exist. To use it, change `branches` to the branch you want to deploy from.
 
 `void.lock.json` is not in the repository, so to deploy from CI, remove it from `.gitignore` in your fork and commit it.
+To use a custom domain, add a `SELFY_DOMAIN` repository variable.
 You also need to add a `CLOUDFLARE_API_TOKEN` repository secret: a token with Workers Scripts edit permission and access to D1 and R2.
 See the [Void documentation](https://void.cloud) for details.
 

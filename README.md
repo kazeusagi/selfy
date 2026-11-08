@@ -58,13 +58,11 @@ Selfy は、自分の Cloudflare アカウントで動かすセルフホスト�
    bun install
    ```
 
-2. リポジトリ直下に `.env` を作ります。
+2. `.env.example` をコピーして `.env` を作り、`ADMIN_EMAIL` を自分のメールアドレスに書き換えます。
+   開発中のメールはローカルの受信箱に届くので、ほかの値はそのままで構いません。
 
    ```sh
-   # 開発中のメールはローカルの受信箱に届くので、値はダミーで構いません
-   RESEND_API_KEY=dummy
-   # 最初にログインできる管理者のメールアドレス
-   ADMIN_EMAIL=you@example.com
+   cp .env.example .env
    ```
 
 3. 開発サーバーを起動します。データベースのマイグレーションは起動時に自動で適用されます。
@@ -104,27 +102,7 @@ cd selfy
 bun install
 ```
 
-### 2. 作者の環境に向いている設定を書き換える
-
-このリポジトリには作者の環境向けの設定が含まれています。そのままデプロイしないよう、次の 2 か所を変更してください。
-
-1. **`void.config.ts` のドメインを変更する。**
-   `routes` の `selfy.kazeusagi.dev` を、自分のドメイン (Cloudflare で管理しているもの) に書き換えます。
-
-   ```ts
-   "routes": [{ "pattern": "photos.example.com", "custom_domain": true }],
-   ```
-
-   独自ドメインを使わず `*.workers.dev` で公開する場合は、`routes` を消して `"workers_dev": true` にします。
-
-2. **`src/server/login-email.ts` の送信元アドレスを変更する。**
-   `FROM` を Resend で認証したドメインのアドレスに書き換えます。
-
-   ```ts
-   const FROM = "Selfy <noreply@example.com>";
-   ```
-
-### 3. Cloudflare にログインする
+### 2. Cloudflare にログインする
 
 ```sh
 bunx void cloudflare login
@@ -132,13 +110,14 @@ bunx void cloudflare login
 
 ブラウザが開くので、デプロイ先のアカウントを選んでください。
 
-### 4. シークレットを設定する
+### 3. シークレットを設定する
 
 本番用の値は `.env` からはアップロードされません。`void secret put` で設定します。
 
 ```sh
 bunx void secret put RESEND_API_KEY   # Resend の API キー
 bunx void secret put ADMIN_EMAIL      # 管理者のメールアドレス
+bunx void secret put EMAIL_FROM       # メールの送信元アドレス (Resend で認証したドメインのもの)
 ```
 
 `BETTER_AUTH_SECRET` は Void が自動で作成するので、設定は不要です。
@@ -146,17 +125,29 @@ bunx void secret put ADMIN_EMAIL      # 管理者のメールアドレス
 > [!NOTE]
 > まだ Worker が存在しないためにシークレットを設定できない場合は、先に一度 `void deploy` を実行してから設定し、もう一度デプロイしてください。
 
-### 5. デプロイする
+### 4. デプロイする
+
+公開するドメインは環境変数 `SELFY_DOMAIN` で指定します。Cloudflare で管理しているドメインを使ってください。
+
+```sh
+SELFY_DOMAIN=photos.example.com bunx void deploy --platform cloudflare
+```
+
+`SELFY_DOMAIN` を指定しなければ、独自ドメインは使わず `*.workers.dev` のサブドメインで公開されます。
 
 ```sh
 bunx void deploy --platform cloudflare
 ```
 
+> [!WARNING]
+> `SELFY_DOMAIN` は `.env` ではなく、デプロイするコマンドの環境変数として渡してください。
+> 独自ドメインで公開したあとに指定し忘れてデプロイすると、独自ドメインが外れて `*.workers.dev` に切り替わります。
+
 D1・R2 の作成、ビルド、マイグレーションの適用、Worker のアップロードまでまとめて行われます。
 作成したリソースの ID は `void.lock.json` に記録されます。このファイルは環境ごとに異なるため `.gitignore` に入れてあります。
 消してしまうと次のデプロイでリソースが新しく作られてしまうので、手元で大切に保管してください。
 
-### 6. 使い始める
+### 5. 使い始める
 
 1. 設定したドメインを開き、`ADMIN_EMAIL` のアドレスでログインします。
 2. ほかの人に使ってもらうには、**設定** 画面からメールアドレスを許可リストに追加します。
@@ -169,6 +160,7 @@ D1・R2 の作成、ビルド、マイグレーションの適用、Worker の�
 現在はデプロイ対象のブランチを存在しない名前にして無効にしてあるので、使う場合は `branches` をデプロイしたいブランチに変更してください。
 
 `void.lock.json` はリポジトリに含まれないため、CI から使う場合は自分のフォークで `.gitignore` から外してコミットしてください。
+独自ドメインで公開する場合は、リポジトリの Variables に `SELFY_DOMAIN` を登録してください。
 また、リポジトリの Secrets に `CLOUDFLARE_API_TOKEN` (Workers Scripts の編集権限と、D1・R2 へのアクセス権を持つトークン) を登録する必要があります。
 詳しくは [Void のドキュメント](https://void.cloud) を参照してください。
 

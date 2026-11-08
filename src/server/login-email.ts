@@ -1,7 +1,9 @@
 import { sendEmail } from "void/email";
 import { env } from "void/env";
 
-const FROM = "Selfy <noreply@kazeusagi.dev>";
+function from() {
+  return `Selfy <${env.EMAIL_FROM}>`;
+}
 
 async function sendWithResend(to: string, subject: string, text: string) {
   const response = await fetch("https://api.resend.com/emails", {
@@ -10,7 +12,7 @@ async function sendWithResend(to: string, subject: string, text: string) {
       Authorization: `Bearer ${env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: FROM, to, subject, text }),
+    body: JSON.stringify({ from: from(), to, subject, text }),
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
@@ -21,7 +23,7 @@ async function sendWithResend(to: string, subject: string, text: string) {
 
 // 開発中は実際には送らず、Void のローカル受信箱に届ける
 async function sendToLocalInbox(to: string, subject: string, text: string) {
-  const result = await sendEmail({ from: FROM, to, subject, text });
+  const result = await sendEmail({ from: from(), to, subject, text });
   if (!result.ok) {
     console.error("メールの送信に失敗しました", result);
     throw new Error("メールを送信できませんでした");
