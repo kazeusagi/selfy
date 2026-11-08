@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { blockedOnCellular, CELLULAR_MESSAGE, type UploadSettings, useUploader } from "@/hooks/use-uploader";
-import { IMAGE_ACCEPT } from "@/components/upload-status";
+import { IMAGE_ACCEPT, openPhotoPicker } from "@/components/upload-status";
 
 async function createAlbum(title: string) {
   const response = await window.fetch("/api/albums", {
@@ -215,7 +215,7 @@ export function UploadDialog({
             size="pill"
             className="font-semibold"
             disabled={uploader.running || (creating && !title.trim())}
-            onClick={() => input.current?.click()}
+            onClick={() => openPhotoPicker(input.current)}
           >
             {uploader.running
               ? `${uploader.finished} / ${uploader.total} 枚を処理中`
