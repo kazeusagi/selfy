@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { fetchExistingHashes, hashFile, originalType, uploadPhoto } from "@/lib/upload";
 
 // 変換はブラウザのメモリを多く使うので同時に2枚まで
@@ -15,7 +15,9 @@ export function blockedOnCellular({ wifiOnly }: UploadSettings) {
 
 export const CELLULAR_MESSAGE = "モバイル通信中はアップロードしません（設定で変更できます）";
 
-export function useUploader(settings: UploadSettings) {
+// 画面を移ってもアップロードを続けられるよう、状態はレイアウトの UploaderProvider に1つだけ持つ
+export function useUploadQueue() {
+  const [albumId, setAlbumId] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [finished, setFinished] = useState(0);
   const [skipped, setSkipped] = useState(0);
@@ -29,7 +31,8 @@ export function useUploader(settings: UploadSettings) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [running]);
 
-  const upload = useCallback(async (albumId: string, files: File[]) => {
+  const upload = useCallback(async (albumId: string, files: File[], settings: UploadSettings) => {
+    setAlbumId(albumId);
     setTotal(files.length);
     setFinished(0);
     setSkipped(0);
@@ -74,7 +77,7 @@ export function useUploader(settings: UploadSettings) {
       }
     };
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
-  }, [settings]);
+  }, []);
 
   const dismiss = useCallback(() => {
     setTotal(0);
@@ -83,5 +86,15 @@ export function useUploader(settings: UploadSettings) {
     setFailures([]);
   }, []);
 
-  return { total, finished, skipped, failures, running, upload, dismiss };
+  return { albumId, total, finished, skipped, failures, running, upload, dismiss };
+}
+
+export type Uploader = ReturnType<typeof useUploadQueue>;
+
+export const UploaderContext = createContext<Uploader | null>(null);
+
+export function useUploader() {
+  const uploader = useContext(UploaderContext);
+  if (!uploader) throw new Error("UploaderProvider の中で使ってください");
+  return uploader;
 }

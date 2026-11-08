@@ -137,7 +137,8 @@ export function UploadDialog({
 }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
-  const uploader = useUploader(settings);
+  const uploader = useUploader();
+  const [pending, setPending] = useState(false);
   const [target, setTarget] = useState(albums[0]?.id ?? NEW_ALBUM);
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -150,17 +151,22 @@ export function UploadDialog({
       return;
     }
     setError(null);
+    setPending(true);
     try {
       const albumId = creating ? (await createAlbum(title.trim())).id : target;
-      await uploader.upload(albumId, files);
+      // 終わるのを待たずに移動し、進み具合はレイアウトの表示で見せる
+      void uploader.upload(albumId, files, settings);
+      onOpenChange(false);
       await router.visit(`/albums/${albumId}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "アップロードに失敗しました");
+    } finally {
+      setPending(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !uploader.running && onOpenChange(next)}>
+    <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
       <DialogContent className="flex flex-col gap-5 rounded-[20px] p-6 md:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">写真をアップロード</DialogTitle>
@@ -170,7 +176,7 @@ export function UploadDialog({
           <label htmlFor="upload-target" className="text-[13px] font-medium">
             アルバム
           </label>
-          <Select value={target} onValueChange={setTarget} disabled={uploader.running}>
+          <Select value={target} onValueChange={setTarget} disabled={pending}>
             <SelectTrigger id="upload-target" className="w-full data-[size=default]:h-11 rounded-xl">
               <SelectValue />
             </SelectTrigger>
@@ -214,12 +220,10 @@ export function UploadDialog({
           <Button
             size="pill"
             className="font-semibold"
-            disabled={uploader.running || (creating && !title.trim())}
+            disabled={pending || uploader.running || (creating && !title.trim())}
             onClick={() => openPhotoPicker(input.current)}
           >
-            {uploader.running
-              ? `${uploader.finished} / ${uploader.total} 枚を処理中`
-              : "写真を選ぶ"}
+            {uploader.running ? "ほかの写真をアップロード中です" : "写真を選ぶ"}
           </Button>
         </DialogFooter>
       </DialogContent>

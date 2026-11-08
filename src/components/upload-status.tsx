@@ -1,5 +1,6 @@
 import { XIcon } from "lucide-react";
-import type { UploadFailure } from "@/hooks/use-uploader";
+import { type ReactNode, useEffect } from "react";
+import { type UploadFailure, UploaderContext, useUploadQueue } from "@/hooks/use-uploader";
 
 export const IMAGE_ACCEPT = "image/*,.heic,.heif";
 
@@ -12,7 +13,35 @@ export function openPhotoPicker(input: HTMLInputElement | null) {
   input.click();
 }
 
-export function UploadStatus({
+export function UploaderProvider({ children }: { children: ReactNode }) {
+  const uploader = useUploadQueue();
+  const { total, finished, skipped, failures, running, dismiss } = uploader;
+
+  // 失敗がなければ、別の画面にいても終わったことがわかるよう少しだけ表示してから消す
+  useEffect(() => {
+    if (total === 0 || running || failures.length > 0) return;
+    const timer = setTimeout(dismiss, 5000);
+    return () => clearTimeout(timer);
+  }, [total, running, failures.length, dismiss]);
+
+  return (
+    <UploaderContext.Provider value={uploader}>
+      {children}
+      {total > 0 && (
+        <UploadStatus
+          total={total}
+          finished={finished}
+          skipped={skipped}
+          failures={failures}
+          running={running}
+          onDismiss={dismiss}
+        />
+      )}
+    </UploaderContext.Provider>
+  );
+}
+
+function UploadStatus({
   total,
   finished,
   skipped,
@@ -27,7 +56,6 @@ export function UploadStatus({
   running: boolean;
   onDismiss: () => void;
 }) {
-  if (total === 0 || (!running && failures.length === 0 && skipped === 0)) return null;
 
   const summary = running
     ? `${finished} / ${total} 枚をアップロード中`
