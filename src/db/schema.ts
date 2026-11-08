@@ -27,6 +27,8 @@ export const photos = sqliteTable(
     width: integer("width").notNull(),
     height: integer("height").notNull(),
     originalBytes: integer("original_bytes").notNull(),
+    // 選んだファイルそのものの SHA-256。同じ写真を二重に追加しないために使う。導入前の写真は null
+    contentHash: text("content_hash"),
     // 元画像、表示用、サムネイルの合計。使用容量の表示に使う
     storedBytes: integer("stored_bytes").notNull(),
     // 撮影地の現地時刻。EXIFにタイムゾーンがないので "YYYY-MM-DDTHH:mm:ss" のまま持つ
@@ -43,6 +45,7 @@ export const photos = sqliteTable(
   (t) => [
     index("photos_album_idx").on(t.albumId, t.takenAt),
     index("photos_owner_idx").on(t.ownerId),
+    index("photos_album_hash_idx").on(t.albumId, t.contentHash),
   ],
 );
 

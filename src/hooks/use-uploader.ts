@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { uploadPhoto } from "@/lib/upload";
+import { fetchExistingHashes, hashFile, originalType, uploadPhoto } from "@/lib/upload";
 
 // 変換はブラウザのメモリを多く使うので同時に2枚まで
 const CONCURRENCY = 2;
@@ -18,6 +18,7 @@ export const CELLULAR_MESSAGE = "モバイル通信中はアップロードし�
 export function useUploader(settings: UploadSettings) {
   const [total, setTotal] = useState(0);
   const [finished, setFinished] = useState(0);
+  const [skipped, setSkipped] = useState(0);
   const [failures, setFailures] = useState<UploadFailure[]>([]);
   const running = finished < total;
 
@@ -31,6 +32,7 @@ export function useUploader(settings: UploadSettings) {
   const upload = useCallback(async (albumId: string, files: File[]) => {
     setTotal(files.length);
     setFinished(0);
+    setSkipped(0);
     setFailures([]);
 
     if (blockedOnCellular(settings)) {
@@ -39,11 +41,31 @@ export function useUploader(settings: UploadSettings) {
       return;
     }
 
+    // 選んだ中での重複も弾けるよう、追加したものもこの集合に足していく
+    let seen: Set<string>;
+    try {
+      seen = await fetchExistingHashes(albumId);
+    } catch (error) {
+      setFinished(files.length);
+      const message = error instanceof Error ? error.message : "アップロードに失敗しました";
+      setFailures(files.map((file) => ({ name: file.name, message })));
+      return;
+    }
+
     const queue = [...files];
     const worker = async () => {
       for (let file = queue.shift(); file; file = queue.shift()) {
         try {
-          await uploadPhoto(albumId, file, settings.keepOriginal);
+          // 写真以外のファイルを読み込んでハッシュを取る前に弾く
+          originalType(file);
+          const hash = await hashFile(file);
+          if (seen.has(hash)) {
+            setSkipped((count) => count + 1);
+          } else {
+            seen.add(hash);
+            const added = await uploadPhoto(albumId, file, settings.keepOriginal, hash);
+            if (!added) setSkipped((count) => count + 1);
+          }
         } catch (error) {
           const message = error instanceof Error ? error.message : "アップロードに失敗しました";
           setFailures((list) => [...list, { name: file!.name, message }]);
@@ -57,8 +79,9 @@ export function useUploader(settings: UploadSettings) {
   const dismiss = useCallback(() => {
     setTotal(0);
     setFinished(0);
+    setSkipped(0);
     setFailures([]);
   }, []);
 
-  return { total, finished, failures, running, upload, dismiss };
+  return { total, finished, skipped, failures, running, upload, dismiss };
 }

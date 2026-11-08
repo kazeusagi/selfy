@@ -16,7 +16,7 @@ const TYPES_BY_EXTENSION: Record<string, string> = {
   heif: "image/heif",
 };
 
-function originalType(file: File) {
+export function originalType(file: File) {
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
   const known = Object.values(TYPES_BY_EXTENSION);
   // OSによっては HEIC の file.type が空になる
@@ -88,7 +88,19 @@ function withExtension(fileName: string, type: string) {
   return fileName.replace(/(\.[^.]+)?$/, type === "image/webp" ? ".webp" : ".jpg");
 }
 
-async function buildUpload(file: File, keepOriginal: boolean) {
+export async function hashFile(file: File) {
+  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export async function fetchExistingHashes(albumId: string) {
+  const response = await window.fetch(`/api/albums/${albumId}/photos`);
+  if (!response.ok) throw new Error(`アルバムの写真を確認できませんでした（${response.status}）`);
+  const { hashes } = (await response.json()) as { hashes: string[] };
+  return new Set(hashes);
+}
+
+async function buildUpload(file: File, keepOriginal: boolean, contentHash: string) {
   const type = originalType(file);
   const exif: Record<string, any> = (await exifr.parse(file).catch(() => null)) ?? {};
   const bitmap = await decode(file, type);
@@ -118,6 +130,7 @@ async function buildUpload(file: File, keepOriginal: boolean) {
         longitude: Number.isFinite(exif.longitude) ? exif.longitude : null,
         camera: describeCamera(exif),
         exposure: describeExposure(exif),
+        contentHash,
       }),
     );
     return form;
@@ -126,8 +139,11 @@ async function buildUpload(file: File, keepOriginal: boolean) {
   }
 }
 
-export async function uploadPhoto(albumId: string, file: File, keepOriginal: boolean) {
-  const body = await buildUpload(file, keepOriginal);
+// 追加済みだった場合は false を返す
+export async function uploadPhoto(albumId: string, file: File, keepOriginal: boolean, contentHash: string) {
+  const body = await buildUpload(file, keepOriginal, contentHash);
   const response = await window.fetch(`/api/albums/${albumId}/photos`, { method: "POST", body });
+  if (response.status === 409) return false;
   if (!response.ok) throw new Error(`アップロードに失敗しました（${response.status}）`);
+  return true;
 }

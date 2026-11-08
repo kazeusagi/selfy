@@ -3,20 +3,37 @@ import type { UploadFailure } from "@/hooks/use-uploader";
 
 export const IMAGE_ACCEPT = "image/*,.heic,.heif";
 
+// Android の Chrome は写真だけを受け付ける入力にすると OS のフォトピッカーを開き、
+// そこでは一度に100枚までしか選べない。accept を外すと上限のないファイル選択画面になる。
+// 写真以外が選ばれてもアップロード時に弾くので問題ない
+export function openPhotoPicker(input: HTMLInputElement | null) {
+  if (!input) return;
+  if (/Android/i.test(navigator.userAgent)) input.removeAttribute("accept");
+  input.click();
+}
+
 export function UploadStatus({
   total,
   finished,
+  skipped,
   failures,
   running,
   onDismiss,
 }: {
   total: number;
   finished: number;
+  skipped: number;
   failures: UploadFailure[];
   running: boolean;
   onDismiss: () => void;
 }) {
-  if (total === 0 || (!running && failures.length === 0)) return null;
+  if (total === 0 || (!running && failures.length === 0 && skipped === 0)) return null;
+
+  const summary = running
+    ? `${finished} / ${total} 枚をアップロード中`
+    : failures.length > 0
+      ? `${failures.length} 枚を追加できませんでした`
+      : `${total - skipped} 枚を追加しました`;
 
   return (
     <div
@@ -24,7 +41,7 @@ export function UploadStatus({
       className="fixed right-6 bottom-6 z-30 max-md:right-4 max-md:bottom-28 flex w-80 max-w-[calc(100%-2rem)] flex-col gap-2 rounded-2xl border border-border bg-popover p-4 text-sm shadow-lg"
     >
       <div className="flex items-center justify-between gap-2 font-semibold">
-        {running ? `${finished} / ${total} 枚をアップロード中` : `${failures.length} 枚を追加できませんでした`}
+        {summary}
         {!running && (
           <button type="button" aria-label="閉じる" className="cursor-pointer" onClick={onDismiss}>
             <XIcon className="size-4" />
@@ -35,6 +52,9 @@ export function UploadStatus({
         <div className="h-1.5 overflow-hidden rounded-full bg-muted">
           <div className="h-full bg-primary transition-all" style={{ width: `${(finished / total) * 100}%` }} />
         </div>
+      )}
+      {skipped > 0 && (
+        <p className="text-[13px] text-muted-foreground">{skipped} 枚は追加済みのためスキップしました</p>
       )}
       {failures.length > 0 && (
         <ul className="flex max-h-32 flex-col gap-1 overflow-auto text-[13px] text-muted-foreground">

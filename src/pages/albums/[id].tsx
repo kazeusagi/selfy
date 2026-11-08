@@ -22,7 +22,7 @@ import { MobileFab } from "@/components/mobile-fab";
 import { PhotoGrid } from "@/components/photo-grid";
 import { type SelectionAction, SelectionBar } from "@/components/selection-bar";
 import { ShareDialog } from "@/components/share-dialog";
-import { IMAGE_ACCEPT, UploadStatus } from "@/components/upload-status";
+import { IMAGE_ACCEPT, openPhotoPicker, UploadStatus } from "@/components/upload-status";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -379,7 +379,7 @@ export default function AlbumPage({
                   size="pill"
                   className="font-semibold"
                   disabled={uploader.running}
-                  onClick={() => fileInput.current?.click()}
+                  onClick={() => openPhotoPicker(fileInput.current)}
                 >
                   <UploadIcon />
                   写真を追加
@@ -442,7 +442,7 @@ export default function AlbumPage({
           aria-label="写真を追加"
           className="bottom-8"
           disabled={uploader.running}
-          onClick={() => fileInput.current?.click()}
+          onClick={() => openPhotoPicker(fileInput.current)}
         />
       )}
 
