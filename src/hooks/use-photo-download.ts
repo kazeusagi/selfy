@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { canShareFiles, fetchOriginals, saveAsZip, savePhoto } from "@/lib/download";
+import { canShareFiles, fetchOriginals, isAndroid, saveAsZip, saveEach, savePhoto } from "@/lib/download";
 
 export type DownloadState =
   | { kind: "idle" }
@@ -9,7 +9,7 @@ export type DownloadState =
 
 type Photo = { id: string; fileName: string };
 
-// 複数枚は、スマホなら共有シートで写真アプリへ、PC なら ZIP にまとめて保存する
+// 複数枚は、iPhone なら共有シートで写真アプリへ、Android なら1枚ずつ、PC なら ZIP にまとめて保存する
 export function usePhotoDownload(zipName: string) {
   const [state, setState] = useState<DownloadState>({ kind: "idle" });
 
@@ -28,7 +28,10 @@ export function usePhotoDownload(zipName: string) {
     try {
       const files = await fetchOriginals(photos, (done) => setState({ kind: "fetching", done, total: photos.length }));
       // 取得を待つ間にタップの効力が切れて共有シートを開けないので、もう一度押してもらう
-      if (canShareFiles(files)) setState({ kind: "ready", files });
+      if (isAndroid()) {
+        await saveEach(files);
+        setState({ kind: "idle" });
+      } else if (canShareFiles(files)) setState({ kind: "ready", files });
       else await zip(files);
     } catch (cause) {
       setState({ kind: "error", message: cause instanceof Error ? cause.message : "ダウンロードできませんでした" });

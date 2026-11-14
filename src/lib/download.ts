@@ -54,9 +54,23 @@ export function savePhoto(photo: { id: string; fileName: string }) {
   link.click();
 }
 
-// スマホでは共有シートから写真アプリに保存できる。PC は ZIP のほうが扱いやすい
+// Android の共有シートには「画像を保存」がなく、送り先のアプリしか出ない
+export function isAndroid() {
+  return /Android/.test(navigator.userAgent);
+}
+
+// 続けて押すとブラウザが取りこぼすことがあるので、少し間を空ける
+export async function saveEach(files: File[]) {
+  for (const file of files) {
+    saveFile(file, file.name);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+}
+
+// iPhone では共有シートから写真アプリに保存できる。PC は ZIP のほうが扱いやすい
 export function canShareFiles(files: File[]) {
   return (
+    !isAndroid() &&
     window.matchMedia("(pointer: coarse)").matches &&
     typeof navigator.canShare === "function" &&
     navigator.canShare({ files })
