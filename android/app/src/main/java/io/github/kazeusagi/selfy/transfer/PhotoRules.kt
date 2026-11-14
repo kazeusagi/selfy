@@ -61,5 +61,5 @@ object PhotoRules {
     }
 
     fun withExtension(fileName: String, extension: String): String =
-        fileName.replace(Regex("""(\.[^.]+)?$"""), ".$extension")
+        fileName.replaceFirst(Regex("""(\.[^.]+)?$"""), ".$extension")
 }
