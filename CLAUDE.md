@@ -68,6 +68,12 @@ SELFY_DOMAIN=<domain> bunx void deploy --platform cloudflare
 - 画像はすべて `GET /api/photos/[id]/[variant]` を通して配信し、毎回権限を確認します (`Cache-Control: private, no-cache`)。共有リンク経由の元画像は、オーナーの設定で位置情報を消す (`stripGps`) ことになっていれば、表示用の画像に差し替えます。
 - `taken_at` は EXIF にタイムゾーンがないため、撮影地の現地時刻を `YYYY-MM-DDTHH:mm:ss` の文字列のまま持ちます。
 
+### Android アプリ (`android/`)
+
+- Kotlin と Jetpack Compose のアプリです。ビルドや配布の手順は `android/README.md` にあります。この環境ではビルドできないことが多いので、確認は GitHub Actions (`.github/workflows/android.yml`) で行います。
+- アプリはページの loader を使えないので、一覧は JSON API から読みます (`GET /api/albums`、`GET /api/albums/[id]`、`GET /api/settings`)。ページの loader に項目を足したら、アプリに必要かどうかも確認してください。`GET /api/info` は、アプリが接続先を登録するときに Selfy かどうかを確かめるためのものです。
+- 写真の変換の規則 (大きさ、画質、撮影情報の書式) は `src/lib/upload.ts` と `android/.../transfer/PhotoRules.kt` で同じにします。
+
 ### UI
 
 - `components/ui/` は shadcn/ui です。テーマの切り替えは next-themes、スタイルは Tailwind CSS v4 (`src/index.css`) です。

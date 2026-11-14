@@ -1,0 +1,73 @@
+name: Android
+
+on:
+  push:
+    branches: [main]
+    tags: ["android-v*"]
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+  pull_request:
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      # タグを打ったときに Releases へ APK を載せる
+      contents: write
+    defaults:
+      run:
+        working-directory: android
+    env:
+      # 署名鍵を登録していないリポジトリ (フォークなど) でもビルドは通す。
+      # その場合はデバッグ鍵の署名になり、前のバージョンへの上書き更新はできない
+      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+      SELFY_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      SELFY_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      SELFY_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      SELFY_VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: 署名鍵とバージョン名を用意する
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/selfy.jks"
+            echo "SELFY_KEYSTORE=$RUNNER_TEMP/selfy.jks" >> "$GITHUB_ENV"
+          fi
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "SELFY_VERSION_NAME=${GITHUB_REF_NAME#android-v}" >> "$GITHUB_ENV"
+          else
+            echo "SELFY_VERSION_NAME=dev-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          fi
+
+      - run: ./gradlew testDebugUnitTest assembleRelease
+
+      - run: cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/selfy.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: selfy-apk
+          path: ${{ runner.temp }}/selfy.apk
+
+      - name: Releases に載せる
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/selfy.apk" --title "Android ${GITHUB_REF_NAME#android-v}" --generate-notes
