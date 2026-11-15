@@ -14,6 +14,9 @@ const body = z
   })
   .partial();
 
+// ページは loader から設定を受け取るが、アプリは API からしか読めない
+export const GET = defineHandler(async (c) => getUserSettings(requireAuth(c).id));
+
 export const PATCH = defineHandler.withValidator({ body })(async (c, { body }) => {
   const user = requireAuth(c);
   const values = { ...(await getUserSettings(user.id)), ...body };

@@ -1,0 +1,6 @@
+<resources>
+    <!-- 画面は Compose で描くので、ここは起動直後の背景色だけを決める -->
+    <style name="Theme.Selfy" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/background</item>
+    </style>
+</resources>
