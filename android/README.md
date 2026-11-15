@@ -23,8 +23,11 @@ JDK 17 と Android SDK が必要です。Android Studio で `android/` を開い
 
 `.github/workflows/android.yml` が APK をビルドします。
 
-- `android/` を変更した push と PR: APK を Actions の Artifacts (`selfy-apk`) に置きます
-- `android-v0.1.0` のようなタグを push: Releases に APK を載せます
+- `android/` を変更した PR: ビルドとテストだけ行い、APK を Actions の Artifacts (`selfy-apk`) に置きます
+- `main` に `android/` の変更が入ったとき: 自動で Releases に APK を載せます。タグを打つ必要はありません
+- 変更なしでリリースを作り直したいとき: Actions → Android → Run workflow を `main` で実行します
+
+バージョンは `0.1.12` のような形です。先頭2桁は `android/gradle.properties` の `selfy.version`、3桁目は CI の実行番号で、リリースのたびに自動で増えます。
 
 ### 署名鍵
 
