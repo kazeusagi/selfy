@@ -34,7 +34,7 @@ SELFY_DOMAIN=<domain> bunx void deploy --platform cloudflare
   - `EMAIL_FROM`: メールの送信元アドレスです
 - `SELFY_DOMAIN` だけはデプロイ時に `void.config.ts` が `process.env` から読みます。`.env` ではなくコマンドの環境変数で渡してください。未設定だと `*.workers.dev` で公開され、独自ドメインが外れます。
 - `void.lock.json` はデプロイ先のリソース ID を持つ環境ごとのファイルなので、`.gitignore` に入れてあります。消さないでください。
-- `.github/workflows/void-deploy.yml` は、存在しないブランチ `not` を対象にして意図的に無効化してあります。頼まれない限り直さないでください。
+- `.github/workflows/void-deploy.yml` は `main` への push でデプロイします。動くのは変数 `SELFY_DEPLOY` が `true` のリポジトリだけです。`void.lock.json` は Secrets の `VOID_LOCK_JSON` から復元します。これがないと D1 と R2 が新しく作られてしまうので、この確認は外さないでください。
 
 ## アーキテクチャ
 

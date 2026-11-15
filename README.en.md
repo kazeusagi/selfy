@@ -105,12 +105,24 @@ Keep the file safe: if it is lost, the next deploy creates new resources.
 
 ### Deploying with GitHub Actions (optional)
 
-`.github/workflows/void-deploy.yml` contains a workflow that deploys on push.
-It is currently disabled by pointing it at a branch that doesn't exist. To use it, change `branches` to the branch you want to deploy from.
+`.github/workflows/void-deploy.yml` deploys on every push to `main`.
+It only runs in repositories where the `SELFY_DEPLOY` variable is `true`, so a fork that hasn't been set up won't run it.
 
-`void.lock.json` is not in the repository, so to deploy from CI, remove it from `.gitignore` in your fork and commit it.
-To use a custom domain, add a `SELFY_DOMAIN` repository variable.
-You also need to add a `CLOUDFLARE_API_TOKEN` repository secret: a token with Workers Scripts edit permission and access to D1 and R2.
+Deploy once from your machine first so that `void.lock.json` exists, then add these under Settings → Secrets and variables → Actions.
+
+| Kind | Name | Value |
+|---|---|---|
+| Variables | `SELFY_DEPLOY` | `true` |
+| Variables | `SELFY_DOMAIN` | The domain to serve on, or `workers.dev` if you don't use a custom domain |
+| Secrets | `CLOUDFLARE_API_TOKEN` | A token with Workers Scripts edit permission and access to D1 and R2 |
+| Secrets | `VOID_LOCK_JSON` | The contents of your local `void.lock.json`, as is |
+
+> [!WARNING]
+> Deploying without `void.lock.json` creates a new D1 database and R2 bucket, and your site would come up with empty data.
+> The workflow therefore fails when `VOID_LOCK_JSON` is missing.
+> After a change that uses a resource other than D1 or R2, deploy once from your machine and update `VOID_LOCK_JSON`.
+
+Changes that only touch `android/` or documentation don't trigger a deploy. You can also run the workflow by hand from the Actions page.
 See the [Void documentation](https://void.cloud) for details.
 
 ## Development

@@ -105,12 +105,24 @@ D1・R2 の作成、ビルド、マイグレーションの適用、Worker の�
 
 ### GitHub Actions で自動デプロイする (任意)
 
-`.github/workflows/void-deploy.yml` に、push 時にデプロイするワークフローが入っています。
-現在はデプロイ対象のブランチを存在しない名前にして無効にしてあるので、使う場合は `branches` をデプロイしたいブランチに変更してください。
+`.github/workflows/void-deploy.yml` に、`main` への push でデプロイするワークフローが入っています。
+変数 `SELFY_DEPLOY` を `true` にしたリポジトリでだけ動くので、何も設定していないフォークでは実行されません。
 
-`void.lock.json` はリポジトリに含まれないため、CI から使う場合は自分のフォークで `.gitignore` から外してコミットしてください。
-独自ドメインで公開する場合は、リポジトリの Variables に `SELFY_DOMAIN` を登録してください。
-また、リポジトリの Secrets に `CLOUDFLARE_API_TOKEN` (Workers Scripts の編集権限と、D1・R2 へのアクセス権を持つトークン) を登録する必要があります。
+先に手元から一度デプロイして `void.lock.json` を作ってから、リポジトリの Settings → Secrets and variables → Actions に次を登録してください。
+
+| 種類 | 名前 | 値 |
+|---|---|---|
+| Variables | `SELFY_DEPLOY` | `true` |
+| Variables | `SELFY_DOMAIN` | 公開するドメイン。独自ドメインを使わないなら `workers.dev` |
+| Secrets | `CLOUDFLARE_API_TOKEN` | Workers Scripts の編集権限と、D1・R2 へのアクセス権を持つトークン |
+| Secrets | `VOID_LOCK_JSON` | 手元の `void.lock.json` の中身をそのまま |
+
+> [!WARNING]
+> `void.lock.json` なしでデプロイすると D1 と R2 が新しく作られ、空のデータで公開されてしまいます。
+> そのため、`VOID_LOCK_JSON` を登録していないとデプロイは失敗します。
+> D1 や R2 以外のリソースを使う変更を入れたときは、手元で一度デプロイしてから `VOID_LOCK_JSON` を更新してください。
+
+`android/` や資料だけの変更ではデプロイしません。Actions の画面から手動で実行することもできます。
 詳しくは [Void のドキュメント](https://void.cloud) を参照してください。
 
 ## 開発環境の起動

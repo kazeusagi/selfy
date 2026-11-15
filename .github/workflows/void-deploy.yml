@@ -1,33 +1,69 @@
 name: Deploy to Cloudflare
 on:
   push:
-    branches: [not]
+    branches: [main]
+    # アプリや資料だけの変更では、サーバーをデプロイし直さない
+    paths-ignore:
+      - "android/**"
+      - ".github/workflows/android.yml"
+      - "design/**"
+      - "movie/**"
+      - "docs/**"
+      - "**.md"
+  workflow_dispatch:
 
 concurrency:
   group: void-cloudflare-deploy-${{ github.repository }}-${{ github.ref }}
-  cancel-in-progress: true
+  # デプロイの途中で止めると、マイグレーションだけ進んだ状態が残りかねない
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
   deploy:
+    # 各自がホストする OSS なので、フォークで勝手に動かないよう、変数で有効にしたリポジトリだけデプロイする
+    if: vars.SELFY_DEPLOY == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+
+      - name: デプロイ先の設定を確認する
+        env:
+          SELFY_DOMAIN: ${{ vars.SELFY_DOMAIN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VOID_LOCK_JSON: ${{ secrets.VOID_LOCK_JSON }}
+        run: |
+          fail() { echo "::error::$1"; exit 1; }
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || fail "Secrets に CLOUDFLARE_API_TOKEN を登録してください"
+          # void.lock.json がないと、Void は D1 と R2 を新しく作ってしまい、空のデータで公開される
+          [ -n "$VOID_LOCK_JSON" ] || fail "Secrets に VOID_LOCK_JSON (手元の void.lock.json の中身) を登録してください"
+          # 指定し忘れると独自ドメインが外れるので、workers.dev で公開する場合も明示させる
+          [ -n "$SELFY_DOMAIN" ] || fail "Variables に SELFY_DOMAIN を登録してください (独自ドメインを使わないなら workers.dev)"
+          printf '%s' "$VOID_LOCK_JSON" > void.lock.json
+          cp void.lock.json "$RUNNER_TEMP/void.lock.before.json"
+          if [ "$SELFY_DOMAIN" != "workers.dev" ]; then
+            echo "SELFY_DOMAIN=$SELFY_DOMAIN" >> "$GITHUB_ENV"
+          fi
+
       - name: Deploy
         env:
-          # The custom domain to serve on. Leave unset to use workers.dev.
-          SELFY_DOMAIN: ${{ vars.SELFY_DOMAIN }}
-          # Add this scoped token at Settings → Secrets and variables → Actions.
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          # Required only for PostgreSQL/MySQL provisioning and migrations.
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Required only when the token can access several accounts.
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           # Required in fresh checkouts when a Worker Version has no preview URL.
           CLOUDFLARE_WORKERS_SUBDOMAIN: ${{ vars.CLOUDFLARE_WORKERS_SUBDOMAIN }}
           # Required only when Cloudflare Access protects Worker readiness.
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: bunx void deploy --platform cloudflare
+
+      - name: リソースが増えていないか確認する
+        run: |
+          # CI で書き換わった void.lock.json は捨てられる。新しいリソースが記録されていた場合、
+          # 放っておくと次のデプロイでまた作られるので気づけるようにする
+          if ! cmp -s void.lock.json "$RUNNER_TEMP/void.lock.before.json"; then
+            echo "::warning::デプロイで void.lock.json が変わりました。新しいリソースが作られた可能性があります。手元で一度デプロイして、Secrets の VOID_LOCK_JSON を新しい中身に更新してください"
+          fi
