@@ -25,6 +25,7 @@ JDK 17 と Android SDK が必要です。Android Studio で `android/` を開い
 
 - `android/` を変更した push と PR: APK を Actions の Artifacts (`selfy-apk`) に置きます
 - `android-v0.1.0` のようなタグを push: Releases に APK を載せます
+- タグを打てないとき (スマホなど): GitHub の Actions → Android → Run workflow で、version に `0.1.0` のように入れて実行すると、タグとリリースを作って APK を載せます
 
 ### 署名鍵
 

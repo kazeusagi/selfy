@@ -11,7 +11,13 @@ on:
     paths:
       - "android/**"
       - ".github/workflows/android.yml"
+  # スマホからでもリリースできるよう、タグを打つ代わりに画面からバージョンを指定して実行できる
   workflow_dispatch:
+    inputs:
+      version:
+        description: "リリースするバージョン (例: 0.1.0)。空ならビルドだけ行う"
+        required: false
+        type: string
 
 concurrency:
   group: android-${{ github.ref }}
@@ -37,6 +43,7 @@ jobs:
       SELFY_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       SELFY_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       SELFY_VERSION_CODE: ${{ github.run_number }}
+      VERSION_INPUT: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-java@v5
@@ -53,6 +60,12 @@ jobs:
           fi
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             echo "SELFY_VERSION_NAME=${GITHUB_REF_NAME#android-v}" >> "$GITHUB_ENV"
+          elif [ -n "$VERSION_INPUT" ]; then
+            if ! echo "$VERSION_INPUT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$'; then
+              echo "バージョンは 0.1.0 のような形で指定してください: $VERSION_INPUT" >&2
+              exit 1
+            fi
+            echo "SELFY_VERSION_NAME=$VERSION_INPUT" >> "$GITHUB_ENV"
           else
             echo "SELFY_VERSION_NAME=dev-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
           fi
@@ -67,7 +80,14 @@ jobs:
           path: ${{ runner.temp }}/selfy.apk
 
       - name: Releases に載せる
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' || inputs.version != ''
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/selfy.apk" --title "Android ${GITHUB_REF_NAME#android-v}" --generate-notes
+        run: |
+          tag="android-v$SELFY_VERSION_NAME"
+          # GitHub の画面でリリースを先に作ってタグを打った場合は、そのリリースに APK を足す
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release upload "$tag" "$RUNNER_TEMP/selfy.apk" --clobber
+          else
+            gh release create "$tag" "$RUNNER_TEMP/selfy.apk" --target "$GITHUB_SHA" --title "Android $SELFY_VERSION_NAME" --generate-notes
+          fi
