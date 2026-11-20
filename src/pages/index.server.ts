@@ -4,6 +4,7 @@ import type { InferProps } from "void";
 import { getUser } from "void/auth";
 import { and, db, eq, lte, sql } from "void/db";
 import { accessibleAlbums, isHiddenBy, isLinkActive, isShown, listWritableAlbums, myMarks } from "@/server/access";
+import { listAllowedUsers } from "@/server/allowed-emails";
 import { hasHiddenPassword } from "@/server/hidden-password";
 import { getUserSettings } from "@/server/settings";
 import { accountOf, displayName, findUsersByIds } from "@/server/users";
@@ -51,7 +52,7 @@ export const loader = defineHandler(async (c) => {
     .as("ranked");
   const covers = await db.select().from(ranked).where(lte(ranked.rank, 3)).orderBy(sql`${ranked.rank}`);
 
-  const [links, members, otherOwners, albumOptions, settings, hasPassword] = await Promise.all([
+  const [links, members, otherOwners, albumOptions, settings, hasPassword, allowedUsers] = await Promise.all([
     db
       .select({ albumId: shareLinks.albumId, expiresAt: shareLinks.expiresAt })
       .from(shareLinks)
@@ -66,6 +67,7 @@ export const loader = defineHandler(async (c) => {
     listWritableAlbums(user),
     getUserSettings(user.id),
     hasHiddenPassword(user.id),
+    listAllowedUsers(),
   ]);
   const linkedIds = new Set(links.filter(isLinkActive).map((link) => link.albumId));
   const ownerNames = new Map(otherOwners.map((owner) => [owner.id, displayName(owner)]));
@@ -119,6 +121,8 @@ export const loader = defineHandler(async (c) => {
     albumOptions,
     ownedAlbums: owned.map((album) => ({ id: album.id, title: album.title })),
     settings,
+    // 新しいアルバムを作るときに共有相手を選べるようにする
+    inviteCandidates: allowedUsers.filter((other) => other.id !== user.id),
     stats: {
       albums: owned.length,
       photos: owned.reduce((sum, album) => sum + album.count, 0),

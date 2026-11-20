@@ -4,8 +4,16 @@ import { requireAuth } from "void/auth";
 import { and, db, eq, sql } from "void/db";
 import { z } from "zod";
 import { accessibleAlbums, isShown, myMarks } from "@/server/access";
+import { inviteMember } from "@/server/invite";
 
-const body = z.object({ title: z.string().trim().min(1).max(100) });
+const body = z.object({
+  title: z.string().trim().min(1).max(100),
+  // アプリは title だけ送るので省略できるようにする
+  members: z
+    .array(z.object({ userId: z.string(), role: z.enum(["viewer", "contributor"]) }))
+    .max(100)
+    .default([]),
+});
 
 export const POST = defineHandler.withValidator({ body })(async (c, { body }) => {
   const user = requireAuth(c);
@@ -13,7 +21,13 @@ export const POST = defineHandler.withValidator({ body })(async (c, { body }) =>
     .insert(albums)
     .values({ id: crypto.randomUUID(), ownerId: user.id, title: body.title })
     .returning();
-  return album;
+  const origin = new URL(c.req.url).origin;
+  const unique = [...new Map(body.members.map((member) => [member.userId, member])).values()];
+  // 一人に招待できなくてもアルバムは作れたので、失敗した人数だけ返して共有画面で直してもらう
+  const results = await Promise.allSettled(
+    unique.map((member) => inviteMember(album, user, member.userId, member.role, origin)),
+  );
+  return { ...album, failedInvites: results.filter((result) => result.status === "rejected").length };
 });
 
 // アプリ用の一覧。ページの loader は HTML 向けなので、同じ内容を JSON で返す口を別に持つ
