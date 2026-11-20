@@ -94,6 +94,7 @@ export default function AlbumsPage({
   albumOptions,
   ownedAlbums,
   settings,
+  inviteCandidates,
   stats,
 }: Props) {
   const router = useRouter();
@@ -198,7 +199,7 @@ export default function AlbumsPage({
       </main>
       <MobileFab aria-label="写真をアップロード" className="bottom-24" onClick={() => setUploading(true)} />
       <BottomNav current={pickingShare ? "share" : "albums"} />
-      <NewAlbumDialog open={creating} onOpenChange={setCreating} />
+      <NewAlbumDialog open={creating} onOpenChange={setCreating} candidates={inviteCandidates} />
       <UploadDialog open={uploading} onOpenChange={setUploading} albums={albumOptions} settings={settings} />
       <ShareAlbumPicker
         open={pickingShare}

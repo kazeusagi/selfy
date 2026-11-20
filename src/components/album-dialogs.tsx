@@ -1,5 +1,5 @@
 import { useRouter } from "@void/react";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,15 +19,18 @@ import {
 } from "@/components/ui/select";
 import { blockedOnCellular, CELLULAR_MESSAGE, type UploadSettings, useUploader } from "@/hooks/use-uploader";
 import { IMAGE_ACCEPT, openPhotoPicker } from "@/components/upload-status";
+import type { InviteCandidate, MemberRole } from "@/components/share-dialog";
 
-async function createAlbum(title: string) {
+type NewMember = { userId: string; role: MemberRole };
+
+async function createAlbum(title: string, members: NewMember[] = []) {
   const response = await window.fetch("/api/albums", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ title }),
+    body: JSON.stringify({ title, members }),
   });
   if (!response.ok) throw new Error("アルバムを作成できませんでした");
-  return (await response.json()) as { id: string };
+  return (await response.json()) as { id: string; failedInvites: number };
 }
 
 export function AlbumTitleDialog({
@@ -38,6 +41,7 @@ export function AlbumTitleDialog({
   label = "アルバム名",
   submitLabel,
   onSubmit,
+  children,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -46,6 +50,7 @@ export function AlbumTitleDialog({
   label?: string;
   submitLabel: string;
   onSubmit: (title: string) => Promise<void>;
+  children?: ReactNode;
 }) {
   const [title, setTitle] = useState(initialTitle);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +101,7 @@ export function AlbumTitleDialog({
               </p>
             )}
           </div>
+          {children}
           <div className="flex justify-end">
             <Button type="submit" size="pill" disabled={pending || !title.trim()} className="font-semibold">
               {submitLabel}
@@ -107,18 +113,74 @@ export function AlbumTitleDialog({
   );
 }
 
-export function NewAlbumDialog(props: { open: boolean; onOpenChange: (open: boolean) => void }) {
+const NOT_SHARED = "none";
+
+export function NewAlbumDialog({
+  candidates,
+  ...props
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  candidates: InviteCandidate[];
+}) {
   const router = useRouter();
+  const [roles, setRoles] = useState<Record<string, MemberRole>>({});
+
+  useEffect(() => {
+    if (props.open) setRoles({});
+  }, [props.open]);
+
   return (
     <AlbumTitleDialog
       {...props}
       heading="新しいアルバム"
       submitLabel="作成"
       onSubmit={async (title) => {
-        const album = await createAlbum(title);
-        await router.visit(`/albums/${album.id}`);
+        const members = Object.entries(roles).map(([userId, role]) => ({ userId, role }));
+        const album = await createAlbum(title, members);
+        // 招待できなかった人がいれば、共有設定を開いてやり直せるようにする
+        await router.visit(`/albums/${album.id}${album.failedInvites ? "?share" : ""}`);
       }}
-    />
+    >
+      {candidates.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <span className="text-[13px] font-medium">共有する人</span>
+          <ul className="flex max-h-60 flex-col overflow-auto">
+            {candidates.map((candidate) => (
+              <li key={candidate.id} className="flex min-h-[52px] items-center gap-3">
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-medium">{candidate.name || candidate.email}</span>
+                  {candidate.name && (
+                    <span className="truncate text-xs text-muted-foreground">{candidate.email}</span>
+                  )}
+                </div>
+                <Select
+                  value={roles[candidate.id] ?? NOT_SHARED}
+                  onValueChange={(value) =>
+                    setRoles(({ [candidate.id]: _, ...rest }) =>
+                      value === NOT_SHARED ? rest : { ...rest, [candidate.id]: value as MemberRole },
+                    )
+                  }
+                >
+                  <SelectTrigger
+                    aria-label={`${candidate.name || candidate.email} の共有`}
+                    className="w-40 flex-none rounded-xl data-[size=default]:h-10"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NOT_SHARED}>共有しない</SelectItem>
+                    <SelectItem value="viewer">閲覧のみ</SelectItem>
+                    <SelectItem value="contributor">写真の追加も可</SelectItem>
+                  </SelectContent>
+                </Select>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-muted-foreground">選んだ人には招待メールが届きます。あとから共有設定で変更できます。</p>
+        </div>
+      )}
+    </AlbumTitleDialog>
   );
 }
 
